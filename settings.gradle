@@ -1,0 +1,2 @@
+include ':sample', ':android-wave-recorder'
+rootProject.name='Android Wave Recorder Sample'
