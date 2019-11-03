@@ -32,7 +32,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 class WaveRecorder(private var filePath: String) {
-    var waveConfig = WaveConfig()
+    var waveConfig: WaveConfig = WaveConfig()
     private var isRecording = false
     private lateinit var audioRecorder: AudioRecord
 

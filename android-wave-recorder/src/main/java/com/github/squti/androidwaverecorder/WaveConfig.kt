@@ -32,7 +32,7 @@ data class WaveConfig(
     var audioEncoding: Int = AudioFormat.ENCODING_PCM_16BIT
 )
 
-fun bitPerSample(audioEncoding: Int) = when (audioEncoding) {
+internal fun bitPerSample(audioEncoding: Int) = when (audioEncoding) {
     AudioFormat.ENCODING_PCM_8BIT -> 8
     AudioFormat.ENCODING_PCM_16BIT -> 16
     else -> 16
