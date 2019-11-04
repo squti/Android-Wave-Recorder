@@ -31,11 +31,20 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.io.File
 
+/**
+ * The WaveRecorder class used to record Waveform audio file using AudioRecord class to get the audio stream in PCM encoding
+ * and then convert it to WAVE file (WAV due to its filename extension) by adding appropriate headers. This class uses
+ * Kotlin Coroutine with IO dispatcher to writing input data on storage asynchronously.
+ * @property filePath the path of the file to be saved.
+ */
 class WaveRecorder(private var filePath: String) {
     var waveConfig: WaveConfig = WaveConfig()
     private var isRecording = false
     private lateinit var audioRecorder: AudioRecord
 
+    /**
+     * Starts audio recording asynchronously and writes recorded data chunks on storage.
+     */
     fun startRecording() {
 
         if (!isAudioRecorderInitialized()) {
@@ -77,6 +86,9 @@ class WaveRecorder(private var filePath: String) {
         outputStream.close()
     }
 
+    /**
+     * Stops audio recorder and release resources then writes recorded file headers.
+     */
     fun stopRecording() {
 
         if (isAudioRecorderInitialized()) {
