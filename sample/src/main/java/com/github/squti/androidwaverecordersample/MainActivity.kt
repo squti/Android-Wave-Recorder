@@ -26,14 +26,17 @@ package com.github.squti.androidwaverecordersample
 
 import android.Manifest
 import android.content.pm.PackageManager
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.github.squti.androidwaverecorder.WaveRecorder
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
@@ -58,7 +61,6 @@ class MainActivity : AppCompatActivity() {
                 )
                 != PackageManager.PERMISSION_GRANTED
             ) {
-
                 ActivityCompat.requestPermissions(
                     this,
                     arrayOf(Manifest.permission.RECORD_AUDIO),
@@ -72,15 +74,22 @@ class MainActivity : AppCompatActivity() {
         stopRecordingButton.setOnClickListener {
             stopRecording()
         }
-    }
 
-    private fun stopRecording() {
-        waveRecorder.stopRecording()
-        recordingTextView.visibility = View.GONE
-        messageTextView.visibility = View.VISIBLE
-        Toast.makeText(this, "File saved at : $filePath", Toast.LENGTH_LONG).show()
-        stopRecordingButton.isEnabled = false
-        startRecordingButton.isEnabled = true
+        showAmplitudeSwitch.setOnCheckedChangeListener { buttonView, isChecked ->
+            if (isChecked) {
+                amplitudeTextView.text = "Amplitude : 0"
+                amplitudeTextView.visibility = View.VISIBLE
+                waveRecorder.onAmplitudeListener = {
+                    GlobalScope.launch(Dispatchers.Main) {
+                        amplitudeTextView.text = "Amplitude : $it"
+                    }
+                }
+
+            } else {
+                waveRecorder.onAmplitudeListener = null
+                amplitudeTextView.visibility = View.GONE
+            }
+        }
     }
 
     private fun startRecording() {
@@ -89,6 +98,16 @@ class MainActivity : AppCompatActivity() {
         recordingTextView.visibility = View.VISIBLE
         startRecordingButton.isEnabled = false
         stopRecordingButton.isEnabled = true
+    }
+
+    private fun stopRecording() {
+        waveRecorder.stopRecording()
+        recordingTextView.visibility = View.GONE
+        messageTextView.visibility = View.VISIBLE
+        showAmplitudeSwitch.isChecked = false
+        Toast.makeText(this, "File saved at : $filePath", Toast.LENGTH_LONG).show()
+        stopRecordingButton.isEnabled = false
+        startRecordingButton.isEnabled = true
     }
 
     override fun onRequestPermissionsResult(
