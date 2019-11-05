@@ -25,7 +25,11 @@ dependencies{
 }
 ```
 ### Permission
-Recording audio in Android needs `RECORD_AUDIO` permission, and if you want to save recorded files in public storage you will need to implement `READ_EXTERNAL_STORAGE` and `WRITE_EXTERNAL_STORAGE` permissions in your project.
+Add these permissions into your `AndroidManifest.xml` and [request for them in Android 6.0+](https://developer.android.com/training/permissions/requesting.html)
+```xml
+<uses-permission android:name="android.permission.RECORD_AUDIO"/>
+<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+```
 
 ### Usage
 Pass in the path of the output file to `WaveRecorder` class and call `startRecording()` like this:
@@ -46,8 +50,15 @@ waveRecorder.stopRecording()
 
 ```
 ### Configuration
-The default configuration for recording is `16000` for **Sample Rate**, `AudioFormat.CHANNEL_IN_MONO` for **Channels** and `AudioFormat.ENCODING_PCM_16BIT` for **Audio Encoding**. But you could change it using `waveConfig` property in `WaveRecorder` class based on your usage. This is an example:
+The default configuration for recording audio is like so: 
 
+| Property | Value |
+| :---: | :---: |
+| sampleRate | 16000 |
+| channels | AudioFormat.CHANNEL_IN_MONO |
+| audioEncoding | AudioFormat.ENCODING_PCM_16BIT |
+
+But you could change it using `waveConfig` property in `WaveRecorder` class based on your usage. This is an example:
 ```kotlin
 val waveRecorder = WaveRecorder(filePath)
 waveRecorder.waveConfig.sampleRate = 44100
