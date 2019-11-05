@@ -29,7 +29,10 @@ import android.media.MediaRecorder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 /**
  * The WaveRecorder class used to record Waveform audio file using AudioRecord class to get the audio stream in PCM encoding
@@ -39,6 +42,7 @@ import java.io.File
  */
 class WaveRecorder(private var filePath: String) {
     var waveConfig: WaveConfig = WaveConfig()
+    var onAmplitudeListener: ((Int) -> Unit)? = null
     private var isRecording = false
     private lateinit var audioRecorder: AudioRecord
 
@@ -67,7 +71,7 @@ class WaveRecorder(private var filePath: String) {
         }
     }
 
-    private fun writeAudioDataToStorage() {
+    private suspend fun writeAudioDataToStorage() {
         val bufferSize = AudioRecord.getMinBufferSize(
             waveConfig.sampleRate,
             waveConfig.channels,
@@ -80,10 +84,26 @@ class WaveRecorder(private var filePath: String) {
 
             if (AudioRecord.ERROR_INVALID_OPERATION != operationStatus) {
                 outputStream.write(data)
+                onAmplitudeListener?.let {
+
+                    withContext(Dispatchers.Default) {
+                        it(calculateAmplitudeMax(data))
+                    }
+                }
+
+
             }
         }
 
         outputStream.close()
+    }
+
+    private fun calculateAmplitudeMax(data: ByteArray): Int {
+        val shortData = ShortArray(data.size / 2)
+        ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
+            .get(shortData)
+
+        return shortData.max()?.toInt() ?: 0
     }
 
     /**
