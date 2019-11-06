@@ -21,7 +21,7 @@ allprojects {
 Step 2. Add the dependency
 ```gradle
 dependencies{
-    implementation 'com.github.squti:Android-Wave-Recorder:1.0.1'
+    implementation 'com.github.squti:Android-Wave-Recorder:1.2.0'
 }
 ```
 ### Permission
@@ -48,6 +48,12 @@ To stop recording call `stopRecording()` function:
 ```kotlin
 waveRecorder.stopRecording()
 
+```
+To listen to audio amplitude during recording you need to register a listener to `onAmplitudeListener`:
+```kotlin
+waveRecorder.onAmplitudeListener = {
+    Log.i(TAG, "Amplitude : $it")
+}
 ```
 ### Configuration
 The default configuration for recording audio is like so: 
