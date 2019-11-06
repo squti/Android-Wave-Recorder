@@ -41,7 +41,14 @@ import java.nio.ByteOrder
  * @property filePath the path of the file to be saved.
  */
 class WaveRecorder(private var filePath: String) {
+    /**
+     * Configuration for recording audio file.
+     */
     var waveConfig: WaveConfig = WaveConfig()
+    /**
+     * Register a callback to be invoked in every recorded chunk of audio data
+     * to get max amplitude of that chunk.
+     */
     var onAmplitudeListener: ((Int) -> Unit)? = null
     private var isRecording = false
     private lateinit var audioRecorder: AudioRecord
