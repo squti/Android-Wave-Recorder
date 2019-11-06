@@ -51,10 +51,10 @@ internal class WaveHeaderWriter(private val filePath: String, private val waveCo
             bitPerSample(waveConfig.audioEncoding)
         )
 
-        val f = RandomAccessFile(File(filePath), "rw")
-        f.seek(0) // to the beginning
-        f.write(header)
-        f.close()
+        val randomAccessFile = RandomAccessFile(File(filePath), "rw")
+        randomAccessFile.seek(0)
+        randomAccessFile.write(header)
+        randomAccessFile.close()
     }
 
     private fun getWavFileHeaderByteArray(
