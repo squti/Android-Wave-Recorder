@@ -50,6 +50,13 @@ To stop recording call `stopRecording()` function:
 waveRecorder.stopRecording()
 
 ```
+
+To activate `Noise Suppressor` you could set `noiseSuppressorActive` to true:
+```kotlin
+waveRecorder.noiseSuppressorActive = true
+
+```
+
 To listen to audio amplitude during recording you need to register a listener to `onAmplitudeListener`:
 ```kotlin
 waveRecorder.onAmplitudeListener = {
