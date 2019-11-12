@@ -26,6 +26,7 @@ package com.github.squti.androidwaverecorder
 
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import android.media.audiofx.NoiseSuppressor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -50,8 +51,15 @@ class WaveRecorder(private var filePath: String) {
      * to get max amplitude of that chunk.
      */
     var onAmplitudeListener: ((Int) -> Unit)? = null
+
+    /**
+     * Activates Noise Suppressor during recording if the device implements noise
+     * suppression.
+     */
+    var noiseSuppressorActive: Boolean = false
     private var isRecording = false
     private lateinit var audioRecorder: AudioRecord
+    private var noiseSuppressor: NoiseSuppressor? = null
 
     /**
      * Starts audio recording asynchronously and writes recorded data chunks on storage.
@@ -72,6 +80,9 @@ class WaveRecorder(private var filePath: String) {
             )
             isRecording = true
             audioRecorder.startRecording()
+            if (noiseSuppressorActive) {
+                noiseSuppressor = NoiseSuppressor.create(audioRecorder.audioSessionId)
+            }
             GlobalScope.launch(Dispatchers.IO) {
                 writeAudioDataToStorage()
             }
@@ -103,6 +114,7 @@ class WaveRecorder(private var filePath: String) {
         }
 
         outputStream.close()
+        noiseSuppressor?.release()
     }
 
     private fun calculateAmplitudeMax(data: ByteArray): Int {
