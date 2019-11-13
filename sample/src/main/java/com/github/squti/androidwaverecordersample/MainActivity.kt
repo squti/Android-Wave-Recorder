@@ -90,6 +90,13 @@ class MainActivity : AppCompatActivity() {
                 amplitudeTextView.visibility = View.GONE
             }
         }
+
+        noiseSuppressorSwitch.setOnCheckedChangeListener { buttonView, isChecked ->
+            waveRecorder.noiseSuppressorActive = isChecked
+            if (isChecked)
+                Toast.makeText(this, "Noise Suppressor Activated", Toast.LENGTH_SHORT).show()
+
+        }
     }
 
     private fun startRecording() {
@@ -98,6 +105,7 @@ class MainActivity : AppCompatActivity() {
         recordingTextView.visibility = View.VISIBLE
         startRecordingButton.isEnabled = false
         stopRecordingButton.isEnabled = true
+        noiseSuppressorSwitch.isEnabled = false
     }
 
     private fun stopRecording() {
@@ -108,6 +116,7 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, "File saved at : $filePath", Toast.LENGTH_LONG).show()
         stopRecordingButton.isEnabled = false
         startRecordingButton.isEnabled = true
+        noiseSuppressorSwitch.isEnabled = true
     }
 
     override fun onRequestPermissionsResult(

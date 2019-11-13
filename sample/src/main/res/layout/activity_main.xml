@@ -46,8 +46,8 @@
         android:layout_width="100dp"
         android:layout_height="wrap_content"
         android:layout_marginBottom="8dp"
-        android:text="stop"
         android:enabled="false"
+        android:text="stop"
         app:layout_constraintBottom_toTopOf="@+id/startRecordingButton"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
@@ -61,6 +61,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
     <TextView
         android:id="@+id/recordingTextView"
         android:layout_width="wrap_content"
@@ -93,13 +94,32 @@
         app:layout_constraintStart_toEndOf="@+id/showAmplitudeSwitch"
         app:layout_constraintTop_toTopOf="@+id/showAmplitudeSwitch" />
 
+    <Switch
+        android:id="@+id/noiseSuppressorSwitch"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginLeft="16dp"
+        app:layout_constraintBottom_toBottomOf="@+id/showAmplitudeSwitch"
+        app:layout_constraintStart_toEndOf="@+id/showAmplitudeLabelTextView"
+        app:layout_constraintTop_toTopOf="@+id/showAmplitudeSwitch" />
+
+    <TextView
+        android:id="@+id/noiseSuppressorTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Noise Suppressor"
+        app:layout_constraintBottom_toBottomOf="@+id/noiseSuppressorSwitch"
+        app:layout_constraintStart_toEndOf="@+id/noiseSuppressorSwitch"
+        app:layout_constraintTop_toTopOf="@+id/noiseSuppressorSwitch" />
+
     <TextView
         android:id="@+id/amplitudeTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
-        tools:text="Amplitude : "
         android:textSize="20sp"
         app:layout_constraintStart_toStartOf="@+id/showAmplitudeSwitch"
-        app:layout_constraintTop_toBottomOf="@+id/showAmplitudeSwitch" />
+        app:layout_constraintTop_toBottomOf="@+id/showAmplitudeSwitch"
+        tools:text="Amplitude : " />
 </androidx.constraintlayout.widget.ConstraintLayout>
