@@ -32,25 +32,26 @@
 
 
     <Button
-        android:id="@+id/startRecordingButton"
+        android:id="@+id/startStopRecordingButton"
         android:layout_width="100dp"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="32dp"
-        android:text="start"
+        android:layout_marginBottom="72dp"
+        android:text="START"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.498"
         app:layout_constraintStart_toStartOf="parent" />
 
     <Button
-        android:id="@+id/stopRecordingButton"
+        android:id="@+id/pauseResumeRecordingButton"
         android:layout_width="100dp"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:enabled="false"
-        android:text="stop"
-        app:layout_constraintBottom_toTopOf="@+id/startRecordingButton"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        android:text="PAUSE"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="@+id/startStopRecordingButton"
+        app:layout_constraintStart_toStartOf="@+id/startStopRecordingButton"
+        app:layout_constraintTop_toBottomOf="@+id/startStopRecordingButton"
+        tools:visibility="visible" />
 
     <TextView
         android:id="@+id/messageTextView"

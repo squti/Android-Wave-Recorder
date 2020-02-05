@@ -44,6 +44,8 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var waveRecorder: WaveRecorder
     private lateinit var filePath: String
+    private var isRecording = false
+    private var isPaused = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,28 +55,35 @@ class MainActivity : AppCompatActivity() {
 
         waveRecorder = WaveRecorder(filePath)
 
-        startRecordingButton.setOnClickListener {
+        startStopRecordingButton.setOnClickListener {
 
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.RECORD_AUDIO
-                )
-                != PackageManager.PERMISSION_GRANTED
-            ) {
-                ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(Manifest.permission.RECORD_AUDIO),
-                    PERMISSIONS_REQUEST_RECORD_AUDIO
-                )
+            if (!isRecording) {
+                if (ContextCompat.checkSelfPermission(
+                        this,
+                        Manifest.permission.RECORD_AUDIO
+                    )
+                    != PackageManager.PERMISSION_GRANTED
+                ) {
+                    ActivityCompat.requestPermissions(
+                        this,
+                        arrayOf(Manifest.permission.RECORD_AUDIO),
+                        PERMISSIONS_REQUEST_RECORD_AUDIO
+                    )
+                } else {
+                    startRecording()
+                }
             } else {
-                startRecording()
+                stopRecording()
             }
         }
 
-        stopRecordingButton.setOnClickListener {
-            stopRecording()
+        pauseResumeRecordingButton.setOnClickListener {
+            if (!isPaused) {
+                pauseRecording()
+            } else {
+                resumeRecording()
+            }
         }
-
         showAmplitudeSwitch.setOnCheckedChangeListener { buttonView, isChecked ->
             if (isChecked) {
                 amplitudeTextView.text = "Amplitude : 0"
@@ -100,23 +109,41 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startRecording() {
+        isRecording = true
         waveRecorder.startRecording()
         messageTextView.visibility = View.GONE
+        recordingTextView.text = "Recording..."
         recordingTextView.visibility = View.VISIBLE
-        startRecordingButton.isEnabled = false
-        stopRecordingButton.isEnabled = true
+        startStopRecordingButton.text = "STOP"
+        pauseResumeRecordingButton.text = "PAUSE"
+        pauseResumeRecordingButton.visibility = View.VISIBLE
         noiseSuppressorSwitch.isEnabled = false
     }
 
     private fun stopRecording() {
+        isRecording = false
         waveRecorder.stopRecording()
         recordingTextView.visibility = View.GONE
         messageTextView.visibility = View.VISIBLE
+        pauseResumeRecordingButton.visibility = View.GONE
         showAmplitudeSwitch.isChecked = false
         Toast.makeText(this, "File saved at : $filePath", Toast.LENGTH_LONG).show()
-        stopRecordingButton.isEnabled = false
-        startRecordingButton.isEnabled = true
+        startStopRecordingButton.text = "START"
         noiseSuppressorSwitch.isEnabled = true
+    }
+
+    private fun pauseRecording() {
+        recordingTextView.text = "PAUSE"
+        pauseResumeRecordingButton.text = "RESUME"
+        isPaused = true
+        waveRecorder.pauseRecording()
+    }
+
+    private fun resumeRecording() {
+        recordingTextView.text = "Recording..."
+        pauseResumeRecordingButton.text = "PAUSE"
+        isPaused = false
+        waveRecorder.resumeRecording()
     }
 
     override fun onRequestPermissionsResult(
