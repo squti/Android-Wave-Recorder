@@ -58,6 +58,7 @@ class WaveRecorder(private var filePath: String) {
      */
     var noiseSuppressorActive: Boolean = false
     private var isRecording = false
+    private var isPaused = false
     private lateinit var audioRecorder: AudioRecord
     private var noiseSuppressor: NoiseSuppressor? = null
 
@@ -101,7 +102,8 @@ class WaveRecorder(private var filePath: String) {
             val operationStatus = audioRecorder.read(data, 0, bufferSize)
 
             if (AudioRecord.ERROR_INVALID_OPERATION != operationStatus) {
-                outputStream.write(data)
+                if (!isPaused) outputStream.write(data)
+
                 onAmplitudeListener?.let {
 
                     withContext(Dispatchers.Default) {
@@ -141,4 +143,12 @@ class WaveRecorder(private var filePath: String) {
 
     private fun isAudioRecorderInitialized(): Boolean =
         this::audioRecorder.isInitialized && audioRecorder.state == AudioRecord.STATE_INITIALIZED
+
+    fun pauseRecording() {
+        isPaused = true
+    }
+
+    fun resumeRecording() {
+        isPaused = false
+    }
 }
