@@ -22,7 +22,7 @@ allprojects {
 Step 2. Add the dependency
 ```gradle
 dependencies{
-    implementation 'com.github.squti:Android-Wave-Recorder:1.3.0'
+    implementation 'com.github.squti:Android-Wave-Recorder:1.4.0'
 }
 ```
 ### Permission
@@ -48,6 +48,16 @@ waveRecorder.startRecording()
 To stop recording call `stopRecording()` function:
 ```kotlin
 waveRecorder.stopRecording()
+
+```
+
+To pause and resume recording you could use `pauseRecording()` and `resumeRecording()` functions:
+```kotlin
+//Pause
+waveRecorder.pauseRecording()
+
+//Resume
+waveRecorder.resumeRecording()
 
 ```
 
