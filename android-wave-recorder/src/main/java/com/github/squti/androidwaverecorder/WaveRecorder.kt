@@ -64,6 +64,12 @@ class WaveRecorder(private var filePath: String) {
      */
     var noiseSuppressorActive: Boolean = false
 
+    /**
+     * The ID of the audio session this WaveRecorder belongs to.
+     * The default value is -1 which means no audio session exist.
+     */
+    var audioSessionId: Int = -1
+        private set
 
     private var isRecording = false
     private var isPaused = false
@@ -87,8 +93,13 @@ class WaveRecorder(private var filePath: String) {
                     waveConfig.audioEncoding
                 )
             )
+
+            audioSessionId = audioRecorder.audioSessionId
+
             isRecording = true
+
             audioRecorder.startRecording()
+
             if (noiseSuppressorActive) {
                 noiseSuppressor = NoiseSuppressor.create(audioRecorder.audioSessionId)
             }
@@ -149,6 +160,7 @@ class WaveRecorder(private var filePath: String) {
             isRecording = false
             audioRecorder.stop()
             audioRecorder.release()
+            audioSessionId = -1
             WaveHeaderWriter(filePath, waveConfig).writeHeader()
             onStateChangeListener?.let {
                 it(RecorderState.STOP)
@@ -173,4 +185,5 @@ class WaveRecorder(private var filePath: String) {
             it(RecorderState.RECORDING)
         }
     }
+
 }
