@@ -27,6 +27,7 @@ package com.github.squti.androidwaverecordersample
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -40,7 +41,6 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
-
     private val PERMISSIONS_REQUEST_RECORD_AUDIO = 77
 
     private lateinit var waveRecorder: WaveRecorder
@@ -117,6 +117,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startRecording() {
+        Log.d(TAG, waveRecorder.audioSessionId.toString())
         isRecording = true
         messageTextView.visibility = View.GONE
         recordingTextView.text = "Recording..."
@@ -159,5 +160,9 @@ class MainActivity : AppCompatActivity() {
             else -> {
             }
         }
+    }
+
+    companion object {
+        private const val TAG = "MainActivity"
     }
 }
