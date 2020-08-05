@@ -32,6 +32,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.github.squti.androidwaverecorder.RecorderState
 import com.github.squti.androidwaverecorder.WaveRecorder
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.Dispatchers
@@ -55,6 +56,13 @@ class MainActivity : AppCompatActivity() {
 
         waveRecorder = WaveRecorder(filePath)
 
+        waveRecorder.onStateChangeListener = {
+            when (it) {
+                RecorderState.RECORDING -> startRecording()
+                RecorderState.STOP -> stopRecording()
+                RecorderState.PAUSE -> pauseRecording()
+            }
+        }
         startStopRecordingButton.setOnClickListener {
 
             if (!isRecording) {
@@ -70,18 +78,18 @@ class MainActivity : AppCompatActivity() {
                         PERMISSIONS_REQUEST_RECORD_AUDIO
                     )
                 } else {
-                    startRecording()
+                    waveRecorder.startRecording()
                 }
             } else {
-                stopRecording()
+                waveRecorder.stopRecording()
             }
         }
 
         pauseResumeRecordingButton.setOnClickListener {
             if (!isPaused) {
-                pauseRecording()
+                waveRecorder.pauseRecording()
             } else {
-                resumeRecording()
+                waveRecorder.resumeRecording()
             }
         }
         showAmplitudeSwitch.setOnCheckedChangeListener { buttonView, isChecked ->
@@ -110,7 +118,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun startRecording() {
         isRecording = true
-        waveRecorder.startRecording()
         messageTextView.visibility = View.GONE
         recordingTextView.text = "Recording..."
         recordingTextView.visibility = View.VISIBLE
@@ -122,7 +129,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun stopRecording() {
         isRecording = false
-        waveRecorder.stopRecording()
         recordingTextView.visibility = View.GONE
         messageTextView.visibility = View.VISIBLE
         pauseResumeRecordingButton.visibility = View.GONE
@@ -136,14 +142,6 @@ class MainActivity : AppCompatActivity() {
         recordingTextView.text = "PAUSE"
         pauseResumeRecordingButton.text = "RESUME"
         isPaused = true
-        waveRecorder.pauseRecording()
-    }
-
-    private fun resumeRecording() {
-        recordingTextView.text = "Recording..."
-        pauseResumeRecordingButton.text = "PAUSE"
-        isPaused = false
-        waveRecorder.resumeRecording()
     }
 
     override fun onRequestPermissionsResult(
@@ -153,7 +151,7 @@ class MainActivity : AppCompatActivity() {
         when (requestCode) {
             PERMISSIONS_REQUEST_RECORD_AUDIO -> {
                 if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
-                    startRecording()
+                    waveRecorder.startRecording()
                 }
                 return
             }
