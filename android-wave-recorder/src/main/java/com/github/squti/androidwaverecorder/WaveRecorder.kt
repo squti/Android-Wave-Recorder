@@ -46,6 +46,7 @@ class WaveRecorder(private var filePath: String) {
      * Configuration for recording audio file.
      */
     var waveConfig: WaveConfig = WaveConfig()
+
     /**
      * Register a callback to be invoked in every recorded chunk of audio data
      * to get max amplitude of that chunk.
@@ -53,10 +54,17 @@ class WaveRecorder(private var filePath: String) {
     var onAmplitudeListener: ((Int) -> Unit)? = null
 
     /**
+     * Register a callback to be invoked in recording state changes
+     */
+    var onStateChangeListener: ((RecorderState) -> Unit)? = null
+
+    /**
      * Activates Noise Suppressor during recording if the device implements noise
      * suppression.
      */
     var noiseSuppressorActive: Boolean = false
+
+
     private var isRecording = false
     private var isPaused = false
     private lateinit var audioRecorder: AudioRecord
@@ -84,6 +92,11 @@ class WaveRecorder(private var filePath: String) {
             if (noiseSuppressorActive) {
                 noiseSuppressor = NoiseSuppressor.create(audioRecorder.audioSessionId)
             }
+
+            onStateChangeListener?.let {
+                it(RecorderState.RECORDING)
+            }
+
             GlobalScope.launch(Dispatchers.IO) {
                 writeAudioDataToStorage()
             }
@@ -137,6 +150,9 @@ class WaveRecorder(private var filePath: String) {
             audioRecorder.stop()
             audioRecorder.release()
             WaveHeaderWriter(filePath, waveConfig).writeHeader()
+            onStateChangeListener?.let {
+                it(RecorderState.STOP)
+            }
         }
 
     }
@@ -146,9 +162,15 @@ class WaveRecorder(private var filePath: String) {
 
     fun pauseRecording() {
         isPaused = true
+        onStateChangeListener?.let {
+            it(RecorderState.PAUSE)
+        }
     }
 
     fun resumeRecording() {
         isPaused = false
+        onStateChangeListener?.let {
+            it(RecorderState.RECORDING)
+        }
     }
 }
