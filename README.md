@@ -73,6 +73,17 @@ waveRecorder.onAmplitudeListener = {
     Log.i(TAG, "Amplitude : $it")
 }
 ```
+
+To listen to recording state changes **(RECORDING, STOP and PAUSE)** you need to register a listener to `onStateChangeListener`:
+```kotlin
+waveRecorder.onStateChangeListener = {
+    when (it) {
+        RecorderState.RECORDING -> TODO()
+        RecorderState.STOP -> TODO()
+        RecorderState.PAUSE -> TODO()
+    }
+}
+```
 ### Configuration
 The default configuration for recording audio is like so: 
 
