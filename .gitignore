@@ -27,3 +27,4 @@ captures/
 *.keystore
 .externalNativeBuild
 google-services.json
+.idea/codeStyles/Project.xml

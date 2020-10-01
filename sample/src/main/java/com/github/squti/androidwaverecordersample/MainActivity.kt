@@ -39,6 +39,8 @@ import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import java.util.*
+import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
     private val PERMISSIONS_REQUEST_RECORD_AUDIO = 77
@@ -63,6 +65,11 @@ class MainActivity : AppCompatActivity() {
                 RecorderState.PAUSE -> pauseRecording()
             }
         }
+        waveRecorder.onTimeElapsed = {
+            Log.e(TAG, "onCreate: time elapsed $it")
+            timeTextView.text = formatTimeUnit(it * 1000)
+        }
+
         startStopRecordingButton.setOnClickListener {
 
             if (!isRecording) {
@@ -164,5 +171,20 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "MainActivity"
+    }
+
+    private fun formatTimeUnit(timeInMilliseconds: Long): String {
+        return try {
+            String.format(
+                Locale.getDefault(),
+                "%02d:%02d",
+                TimeUnit.MILLISECONDS.toMinutes(timeInMilliseconds),
+                TimeUnit.MILLISECONDS.toSeconds(timeInMilliseconds) - TimeUnit.MINUTES.toSeconds(
+                    TimeUnit.MILLISECONDS.toMinutes(timeInMilliseconds)
+                )
+            )
+        } catch (e: Exception) {
+            "00:00"
+        }
     }
 }
