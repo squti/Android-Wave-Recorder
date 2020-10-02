@@ -59,6 +59,11 @@ class WaveRecorder(private var filePath: String) {
     var onStateChangeListener: ((RecorderState) -> Unit)? = null
 
     /**
+     * Register a callback to get elapsed recording time in seconds
+     */
+    var onTimeElapsed: ((Long) -> Unit)? = null
+
+    /**
      * Activates Noise Suppressor during recording if the device implements noise
      * suppression.
      */
@@ -121,17 +126,21 @@ class WaveRecorder(private var filePath: String) {
             waveConfig.audioEncoding
         )
         val data = ByteArray(bufferSize)
-        val outputStream = File(filePath).outputStream()
+        val file = File(filePath)
+        val outputStream = file.outputStream()
         while (isRecording) {
             val operationStatus = audioRecorder.read(data, 0, bufferSize)
 
             if (AudioRecord.ERROR_INVALID_OPERATION != operationStatus) {
                 if (!isPaused) outputStream.write(data)
 
-                onAmplitudeListener?.let {
-
-                    withContext(Dispatchers.Default) {
+                withContext(Dispatchers.Main) {
+                    onAmplitudeListener?.let {
                         it(calculateAmplitudeMax(data))
+                    }
+                    onTimeElapsed?.let {
+                        val audioLengthInSeconds: Long = file.length() / (2 * waveConfig.sampleRate)
+                        it(audioLengthInSeconds)
                     }
                 }
 
