@@ -45,7 +45,7 @@ import java.nio.ByteOrder
  * Kotlin Coroutine with IO dispatcher to writing input data on storage asynchronously.
  * @property filePath the path of the file to be saved.
  */
-class WaveRecorder(private var context: Context) {
+class WaveRecorder(private val context: Context) {
     private var fileUri: Uri? = null
     private var filePath: String? = null
 
@@ -145,7 +145,7 @@ class WaveRecorder(private var context: Context) {
         val outputStream: OutputStream
 //        var length: Long
         if (filePath != null) {
-            val file = File(filePath ?: return@withContext)
+            val file = File(filePath!!)
             outputStream = file.outputStream()
         } else {
             outputStream = (context.contentResolver.openOutputStream(fileUri ?: return@withContext)
@@ -203,9 +203,9 @@ class WaveRecorder(private var context: Context) {
             audioRecorder.release()
             audioSessionId = -1
             if (filePath != null) {
-                WaveHeaderWriter(filePath, waveConfig).writeHeader()
+                WaveHeaderWriter(waveConfig, context).with(filePath!!).writeHeader()
             } else {
-                WaveHeaderWriter(context, fileUri, waveConfig).writeHeader()
+                WaveHeaderWriter(waveConfig, context).with(fileUri!!).writeHeader()
             }
             onStateChangeListener?.let {
                 it(RecorderState.STOP)

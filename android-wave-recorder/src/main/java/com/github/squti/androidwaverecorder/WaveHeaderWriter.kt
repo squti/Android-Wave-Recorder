@@ -32,24 +32,32 @@ import java.io.FileInputStream
 import java.io.RandomAccessFile
 
 internal class WaveHeaderWriter(
-    private val filePath: String?,
-    private val waveConfig: WaveConfig
+    private val waveConfig: WaveConfig,
+    private val context: Context
 ) {
     var fileUri: Uri? = null
-    var context: Context? = null
+    var filePath: String? = null
 
-    constructor(context: Context, fileUri: Uri?, waveConfig: WaveConfig) : this(null, waveConfig) {
+    fun with(filePath: String): WaveHeaderWriter {
+        this.filePath = filePath
+        return this
+    }
+
+    fun with(fileUri: Uri): WaveHeaderWriter {
         this.fileUri = fileUri
-        this.context = context
+        return this
     }
 
     fun writeHeader() {
+        if (filePath == null && fileUri == null) {
+            return
+        }
         val inputStream: FileInputStream
         if (filePath != null) {
-            inputStream = File(filePath).inputStream()
+            inputStream = File(filePath!!).inputStream()
         } else {
             val descriptor =
-                context!!.contentResolver.openFileDescriptor(fileUri!!, "rw")?.fileDescriptor
+                context.contentResolver.openFileDescriptor(fileUri!!, "rw")?.fileDescriptor
                     ?: return
             inputStream = FileInputStream(descriptor)
         }
@@ -75,11 +83,11 @@ internal class WaveHeaderWriter(
 
 
         if (filePath == null) {
-            val outputStream = context!!.contentResolver.openOutputStream(fileUri!!, "rw")
+            val outputStream = context.contentResolver.openOutputStream(fileUri!!, "rw")
             outputStream?.write(header)
             outputStream?.close()
         } else {
-            val randomAccessFile = RandomAccessFile(File(filePath), "rw")
+            val randomAccessFile = RandomAccessFile(File(filePath!!), "rw")
             randomAccessFile.seek(0)
             randomAccessFile.write(header)
             randomAccessFile.close()
