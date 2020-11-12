@@ -25,6 +25,7 @@
 package com.github.squti.androidwaverecordersample
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
@@ -42,11 +43,13 @@ import kotlinx.coroutines.launch
 import java.util.*
 import java.util.concurrent.TimeUnit
 
+
 class MainActivity : AppCompatActivity() {
     private val PERMISSIONS_REQUEST_RECORD_AUDIO = 77
 
     private lateinit var waveRecorder: WaveRecorder
-    private lateinit var filePath: String
+
+    //    private lateinit var filePath: String
     private var isRecording = false
     private var isPaused = false
 
@@ -54,9 +57,9 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        filePath = externalCacheDir?.absolutePath + "/audioFile.wav"
+//        filePath = externalCacheDir?.absolutePath + "/audioFile.wav"
 
-        waveRecorder = WaveRecorder(filePath)
+        waveRecorder = WaveRecorder(this)
 
         waveRecorder.onStateChangeListener = {
             when (it) {
@@ -69,6 +72,7 @@ class MainActivity : AppCompatActivity() {
             Log.e(TAG, "onCreate: time elapsed $it")
             timeTextView.text = formatTimeUnit(it * 1000)
         }
+
 
         startStopRecordingButton.setOnClickListener {
 
@@ -85,7 +89,16 @@ class MainActivity : AppCompatActivity() {
                         PERMISSIONS_REQUEST_RECORD_AUDIO
                     )
                 } else {
-                    waveRecorder.startRecording()
+
+
+                    val intent = Intent(Intent.ACTION_CREATE_DOCUMENT)
+
+                    intent.addCategory(Intent.CATEGORY_OPENABLE)
+                    intent.type = "audio/wav"
+                    intent.putExtra(Intent.EXTRA_TITLE, "testFileSam.wav");
+                    startActivityForResult(intent, 101)
+
+
                 }
             } else {
                 waveRecorder.stopRecording()
@@ -141,7 +154,7 @@ class MainActivity : AppCompatActivity() {
         messageTextView.visibility = View.VISIBLE
         pauseResumeRecordingButton.visibility = View.GONE
         showAmplitudeSwitch.isChecked = false
-        Toast.makeText(this, "File saved at : $filePath", Toast.LENGTH_LONG).show()
+        Toast.makeText(this, "File saved at", Toast.LENGTH_LONG).show()
         startStopRecordingButton.text = "START"
         noiseSuppressorSwitch.isEnabled = true
     }
@@ -159,7 +172,7 @@ class MainActivity : AppCompatActivity() {
         when (requestCode) {
             PERMISSIONS_REQUEST_RECORD_AUDIO -> {
                 if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
-                    waveRecorder.startRecording()
+//                    waveRecorder.startRecording()
                 }
                 return
             }
@@ -171,6 +184,17 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "MainActivity"
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 101) {
+            if (resultCode == RESULT_OK) {
+                val uri = data?.data ?: return
+
+                waveRecorder.startRecording(uri)
+            }
+        }
     }
 
     private fun formatTimeUnit(timeInMilliseconds: Long): String {
