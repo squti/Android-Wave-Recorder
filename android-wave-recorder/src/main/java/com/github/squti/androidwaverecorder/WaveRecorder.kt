@@ -24,14 +24,18 @@
 
 package com.github.squti.androidwaverecorder
 
+import android.content.Context
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.media.audiofx.NoiseSuppressor
+import android.net.Uri
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.OutputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -41,7 +45,10 @@ import java.nio.ByteOrder
  * Kotlin Coroutine with IO dispatcher to writing input data on storage asynchronously.
  * @property filePath the path of the file to be saved.
  */
-class WaveRecorder(private var filePath: String) {
+class WaveRecorder(private var context: Context) {
+    private var fileUri: Uri? = null
+    private var filePath: String? = null
+
     /**
      * Configuration for recording audio file.
      */
@@ -84,8 +91,17 @@ class WaveRecorder(private var filePath: String) {
     /**
      * Starts audio recording asynchronously and writes recorded data chunks on storage.
      */
-    fun startRecording() {
+    fun startRecording(filePath: String?) {
+        this.filePath = filePath
+        startRecording()
+    }
 
+    fun startRecording(fileUri: Uri?) {
+        this.fileUri = fileUri
+        startRecording()
+    }
+
+    private fun startRecording() {
         if (!isAudioRecorderInitialized()) {
             audioRecorder = AudioRecord(
                 MediaRecorder.AudioSource.MIC,
@@ -113,37 +129,53 @@ class WaveRecorder(private var filePath: String) {
                 it(RecorderState.RECORDING)
             }
 
-            GlobalScope.launch(Dispatchers.IO) {
+            GlobalScope.launch(Dispatchers.Main) {
                 writeAudioDataToStorage()
             }
         }
     }
 
-    private suspend fun writeAudioDataToStorage() {
+    private suspend fun writeAudioDataToStorage() = withContext(Dispatchers.IO) {
         val bufferSize = AudioRecord.getMinBufferSize(
             waveConfig.sampleRate,
             waveConfig.channels,
             waveConfig.audioEncoding
         )
         val data = ByteArray(bufferSize)
-        val file = File(filePath)
-        val outputStream = file.outputStream()
+        val outputStream: OutputStream
+//        var length: Long
+        if (filePath != null) {
+            val file = File(filePath ?: return@withContext)
+            outputStream = file.outputStream()
+        } else {
+            outputStream = (context.contentResolver.openOutputStream(fileUri ?: return@withContext)
+                ?: return@withContext)
+        }
+        var length = 0L
         while (isRecording) {
             val operationStatus = audioRecorder.read(data, 0, bufferSize)
 
             if (AudioRecord.ERROR_INVALID_OPERATION != operationStatus) {
-                if (!isPaused) outputStream.write(data)
+                if (isPaused)
+                    continue
+
+                outputStream.write(data)
+                length += data.size
 
                 withContext(Dispatchers.Main) {
                     onAmplitudeListener?.let {
                         it(calculateAmplitudeMax(data))
                     }
+                }
+                withContext(Dispatchers.IO) {
                     onTimeElapsed?.let {
-                        val audioLengthInSeconds: Long = file.length() / (2 * waveConfig.sampleRate)
-                        it(audioLengthInSeconds)
+                        Log.e("waveFileRecorder", "writeAudioDataToStorage: length $length")
+                        val audioLengthInSeconds: Long = length / (2 * waveConfig.sampleRate)
+                        withContext(Dispatchers.Main) {
+                            it(audioLengthInSeconds)
+                        }
                     }
                 }
-
 
             }
         }
@@ -170,7 +202,11 @@ class WaveRecorder(private var filePath: String) {
             audioRecorder.stop()
             audioRecorder.release()
             audioSessionId = -1
-            WaveHeaderWriter(filePath, waveConfig).writeHeader()
+            if (filePath != null) {
+                WaveHeaderWriter(filePath, waveConfig).writeHeader()
+            } else {
+                WaveHeaderWriter(context, fileUri, waveConfig).writeHeader()
+            }
             onStateChangeListener?.let {
                 it(RecorderState.STOP)
             }
