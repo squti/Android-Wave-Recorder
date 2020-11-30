@@ -159,6 +159,16 @@ class WaveRecorder(private var filePath: String) {
 
         return shortData.max()?.toInt() ?: 0
     }
+    
+    /** Changes @property filePath to @param newFilePath
+     * Calling this method while still recording throws an IllegalStateException
+     */
+    fun changeFilePath(newFilePath: String) {
+        if (isRecording)
+            throw IllegalStateException("Cannot change filePath when still recording.")
+        else
+            filePath = newFilePath
+    }
 
     /**
      * Stops audio recorder and release resources then writes recorded file headers.
