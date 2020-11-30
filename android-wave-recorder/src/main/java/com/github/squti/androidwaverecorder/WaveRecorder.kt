@@ -166,7 +166,7 @@ class WaveRecorder(private var filePath: String) {
      */
     fun changeFilePath(newFilePath: String) {
         if (isRecording)
-            throw IllegalStateException("Cannot change filePath when still recording. Stop recording first then call this function.")
+            throw IllegalStateException("Cannot change filePath when still recording.")
         else
             filePath = newFilePath
     }
