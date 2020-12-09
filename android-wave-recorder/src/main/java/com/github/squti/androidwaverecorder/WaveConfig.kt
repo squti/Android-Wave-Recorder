@@ -31,11 +31,15 @@ import android.media.AudioFormat
  * @property [sampleRate] the number of samples that audio carried per second.
  * @property [channels] number and position of sound source when the sound is recording.
  * @property [audioEncoding] size of data per sample.
+ * @property [threshold] number which indicate your voice volume threshold when skipSilence is true
+ * @property [max_continuous_silence_allowed] number which indicate your silence space need to be allowed between words when skipSilence is true
  */
 data class WaveConfig(
     var sampleRate: Int = 16000,
     var channels: Int = AudioFormat.CHANNEL_IN_MONO,
-    var audioEncoding: Int = AudioFormat.ENCODING_PCM_16BIT
+    var audioEncoding: Int = AudioFormat.ENCODING_PCM_16BIT,
+    var threshold: Short = 5000,
+    val max_continuous_silence_allowed: Int = 15
 )
 
 internal fun bitPerSample(audioEncoding: Int) = when (audioEncoding) {

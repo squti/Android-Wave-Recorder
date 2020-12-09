@@ -27,6 +27,7 @@ package com.github.squti.androidwaverecorder
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.media.audiofx.NoiseSuppressor
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -80,6 +81,7 @@ class WaveRecorder(private var filePath: String) {
     private var isPaused = false
     private lateinit var audioRecorder: AudioRecord
     private var noiseSuppressor: NoiseSuppressor? = null
+    var skipSilence: Boolean = false
 
     /**
      * Starts audio recording asynchronously and writes recorded data chunks on storage.
@@ -120,19 +122,44 @@ class WaveRecorder(private var filePath: String) {
     }
 
     private suspend fun writeAudioDataToStorage() {
+        var continuousSilence: Int = 0
         val bufferSize = AudioRecord.getMinBufferSize(
             waveConfig.sampleRate,
             waveConfig.channels,
             waveConfig.audioEncoding
         )
-        val data = ByteArray(bufferSize)
+        val data = ShortArray(bufferSize)
         val file = File(filePath)
         val outputStream = file.outputStream()
         while (isRecording) {
             val operationStatus = audioRecorder.read(data, 0, bufferSize)
 
             if (AudioRecord.ERROR_INVALID_OPERATION != operationStatus) {
-                if (!isPaused) outputStream.write(data)
+                if (!isPaused) {
+                    if (skipSilence) {
+                        val foundPeak = searchThreshold(data, waveConfig.threshold)
+                        if (foundPeak == -1) {
+                            if (continuousSilence <= waveConfig.max_continuous_silence_allowed) {
+                                continuousSilence++
+                            }
+
+                        } else {
+                            continuousSilence = 0
+                        }
+                        Log.d(
+                            "Wacerecorder",
+                            "writeAudioDataToStorage: continuousSilence $continuousSilence"
+                        )
+                        //stop to send, only when counter became equals SILENCE_DEGREE
+                        if (continuousSilence < waveConfig.max_continuous_silence_allowed) {  //found signal
+                            //SEND USEFUL DATA
+                            outputStream.write(data.toByteArray())  //record signal
+                        }
+                    } else {
+                        outputStream.write(data.toByteArray())
+                    }
+
+                }
 
                 withContext(Dispatchers.Main) {
                     onAmplitudeListener?.let {
@@ -152,14 +179,30 @@ class WaveRecorder(private var filePath: String) {
         noiseSuppressor?.release()
     }
 
-    private fun calculateAmplitudeMax(data: ByteArray): Int {
-        val shortData = ShortArray(data.size / 2)
-        ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
-            .get(shortData)
-
-        return shortData.max()?.toInt() ?: 0
+    fun ShortArray.toByteArray(): ByteArray {
+        val buffer = ByteBuffer.allocate(size * 2)
+        buffer.order(ByteOrder.LITTLE_ENDIAN)
+        buffer.asShortBuffer().put(this)
+        return buffer.array()
     }
-    
+
+    private fun searchThreshold(arr: ShortArray, thr: Short): Int {
+        val arrLen = arr.size
+        var peakIndex = 0
+        while (peakIndex < arrLen) {
+            if (arr[peakIndex] >= thr || arr[peakIndex] <= -thr) {
+                //if it exceeds the threshold, exit and return peakindex-half kernel.
+                return peakIndex
+            }
+            peakIndex++
+        }
+        return -1 //not found
+    }
+
+    private fun calculateAmplitudeMax(data: ShortArray): Int {
+        return data.max()?.toInt() ?: 0
+    }
+
     /** Changes @property filePath to @param newFilePath
      * Calling this method while still recording throws an IllegalStateException
      */
