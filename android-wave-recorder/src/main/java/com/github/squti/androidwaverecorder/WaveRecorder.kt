@@ -177,6 +177,7 @@ class WaveRecorder(private var filePath: String) {
 
         if (isAudioRecorderInitialized()) {
             isRecording = false
+            isPaused = false
             audioRecorder.stop()
             audioRecorder.release()
             audioSessionId = -1

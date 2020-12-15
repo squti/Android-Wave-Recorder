@@ -126,6 +126,7 @@ class MainActivity : AppCompatActivity() {
     private fun startRecording() {
         Log.d(TAG, waveRecorder.audioSessionId.toString())
         isRecording = true
+        isPaused = false
         messageTextView.visibility = View.GONE
         recordingTextView.text = "Recording..."
         recordingTextView.visibility = View.VISIBLE
@@ -137,6 +138,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun stopRecording() {
         isRecording = false
+        isPaused = false
         recordingTextView.visibility = View.GONE
         messageTextView.visibility = View.VISIBLE
         pauseResumeRecordingButton.visibility = View.GONE
