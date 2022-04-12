@@ -25,6 +25,7 @@
 package com.github.squti.androidwaverecorder
 
 import android.annotation.SuppressLint
+import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.media.audiofx.NoiseSuppressor
@@ -81,6 +82,8 @@ class WaveRecorder(private var filePath: String) {
     private var isPaused = false
     private lateinit var audioRecorder: AudioRecord
     private var noiseSuppressor: NoiseSuppressor? = null
+    private var channelModulus = 2
+
 
     /**
      * Starts audio recording asynchronously and writes recorded data chunks on storage.
@@ -100,6 +103,8 @@ class WaveRecorder(private var filePath: String) {
                     waveConfig.audioEncoding
                 )
             )
+            if (waveConfig.channels == AudioFormat.CHANNEL_IN_STEREO)
+                channelModulus = 4
 
             audioSessionId = audioRecorder.audioSessionId
 
@@ -141,7 +146,7 @@ class WaveRecorder(private var filePath: String) {
                         it(calculateAmplitudeMax(data))
                     }
                     onTimeElapsed?.let {
-                        val audioLengthInSeconds: Long = file.length() / (2 * waveConfig.sampleRate)
+                        val audioLengthInSeconds: Long = file.length() / (channelModulus * waveConfig.sampleRate)
                         it(audioLengthInSeconds)
                     }
                 }
