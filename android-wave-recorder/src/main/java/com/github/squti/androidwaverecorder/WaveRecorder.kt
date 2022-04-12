@@ -24,6 +24,7 @@
 
 package com.github.squti.androidwaverecorder
 
+import android.annotation.SuppressLint
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.media.audiofx.NoiseSuppressor
@@ -84,6 +85,7 @@ class WaveRecorder(private var filePath: String) {
     /**
      * Starts audio recording asynchronously and writes recorded data chunks on storage.
      */
+    @SuppressLint("MissingPermission")
     fun startRecording() {
 
         if (!isAudioRecorderInitialized()) {
@@ -157,7 +159,7 @@ class WaveRecorder(private var filePath: String) {
         ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
             .get(shortData)
 
-        return shortData.max()?.toInt() ?: 0
+        return shortData.maxOrNull()?.toInt() ?: 0
     }
     
     /** Changes @property filePath to @param newFilePath
