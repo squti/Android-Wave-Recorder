@@ -82,7 +82,7 @@ class WaveRecorder(private var filePath: String) {
     private var isPaused = false
     private lateinit var audioRecorder: AudioRecord
     private var noiseSuppressor: NoiseSuppressor? = null
-    private var channelModulus = 2
+    private var timeModulus = 1
 
 
     /**
@@ -103,8 +103,9 @@ class WaveRecorder(private var filePath: String) {
                     waveConfig.audioEncoding
                 )
             )
+            timeModulus = bitPerSample(waveConfig.audioEncoding) * waveConfig.sampleRate / 8
             if (waveConfig.channels == AudioFormat.CHANNEL_IN_STEREO)
-                channelModulus = 4
+                timeModulus *= 2
 
             audioSessionId = audioRecorder.audioSessionId
 
@@ -146,7 +147,7 @@ class WaveRecorder(private var filePath: String) {
                         it(calculateAmplitudeMax(data))
                     }
                     onTimeElapsed?.let {
-                        val audioLengthInSeconds: Long = file.length() / (channelModulus * waveConfig.sampleRate)
+                        val audioLengthInSeconds: Long = file.length() / timeModulus
                         it(audioLengthInSeconds)
                     }
                 }
