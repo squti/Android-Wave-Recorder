@@ -37,7 +37,6 @@ import androidx.lifecycle.lifecycleScope
 import com.github.squti.androidwaverecorder.RecorderState
 import com.github.squti.androidwaverecorder.WaveRecorder
 import com.github.squti.androidwaverecordersample.databinding.ActivityMainBinding
-import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -103,7 +102,7 @@ class MainActivity : AppCompatActivity() {
                 waveRecorder.resumeRecording()
             }
         }
-        binding.showAmplitudeSwitch.setOnCheckedChangeListener { buttonView, isChecked ->
+        binding.showAmplitudeSwitch.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 binding.amplitudeTextView.text = "Amplitude : 0"
                 binding.amplitudeTextView.visibility = View.VISIBLE
@@ -117,7 +116,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        binding.noiseSuppressorSwitch.setOnCheckedChangeListener { buttonView, isChecked ->
+        binding.noiseSuppressorSwitch.setOnCheckedChangeListener { _, isChecked ->
             waveRecorder.noiseSuppressorActive = isChecked
             if (isChecked)
                 Toast.makeText(this, "Noise Suppressor Activated", Toast.LENGTH_SHORT).show()
