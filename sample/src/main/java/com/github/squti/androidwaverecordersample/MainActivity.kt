@@ -33,8 +33,10 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import com.github.squti.androidwaverecorder.RecorderState
 import com.github.squti.androidwaverecorder.WaveRecorder
+import com.github.squti.androidwaverecordersample.databinding.ActivityMainBinding
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -49,10 +51,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var filePath: String
     private var isRecording = false
     private var isPaused = false
+    private lateinit var binding: ActivityMainBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         filePath = externalCacheDir?.absolutePath + "/audioFile.wav"
 
@@ -67,10 +71,10 @@ class MainActivity : AppCompatActivity() {
         }
         waveRecorder.onTimeElapsed = {
             Log.e(TAG, "onCreate: time elapsed $it")
-            timeTextView.text = formatTimeUnit(it * 1000)
+            binding.timeTextView.text = formatTimeUnit(it * 1000)
         }
 
-        startStopRecordingButton.setOnClickListener {
+        binding.startStopRecordingButton.setOnClickListener {
 
             if (!isRecording) {
                 if (ContextCompat.checkSelfPermission(
@@ -92,30 +96,28 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        pauseResumeRecordingButton.setOnClickListener {
+        binding.pauseResumeRecordingButton.setOnClickListener {
             if (!isPaused) {
                 waveRecorder.pauseRecording()
             } else {
                 waveRecorder.resumeRecording()
             }
         }
-        showAmplitudeSwitch.setOnCheckedChangeListener { buttonView, isChecked ->
+        binding.showAmplitudeSwitch.setOnCheckedChangeListener { buttonView, isChecked ->
             if (isChecked) {
-                amplitudeTextView.text = "Amplitude : 0"
-                amplitudeTextView.visibility = View.VISIBLE
+                binding.amplitudeTextView.text = "Amplitude : 0"
+                binding.amplitudeTextView.visibility = View.VISIBLE
                 waveRecorder.onAmplitudeListener = {
-                    GlobalScope.launch(Dispatchers.Main) {
-                        amplitudeTextView.text = "Amplitude : $it"
-                    }
+                        binding.amplitudeTextView.text = "Amplitude : $it"
                 }
 
             } else {
                 waveRecorder.onAmplitudeListener = null
-                amplitudeTextView.visibility = View.GONE
+                binding.amplitudeTextView.visibility = View.GONE
             }
         }
 
-        noiseSuppressorSwitch.setOnCheckedChangeListener { buttonView, isChecked ->
+        binding.noiseSuppressorSwitch.setOnCheckedChangeListener { buttonView, isChecked ->
             waveRecorder.noiseSuppressorActive = isChecked
             if (isChecked)
                 Toast.makeText(this, "Noise Suppressor Activated", Toast.LENGTH_SHORT).show()
@@ -127,30 +129,30 @@ class MainActivity : AppCompatActivity() {
         Log.d(TAG, waveRecorder.audioSessionId.toString())
         isRecording = true
         isPaused = false
-        messageTextView.visibility = View.GONE
-        recordingTextView.text = "Recording..."
-        recordingTextView.visibility = View.VISIBLE
-        startStopRecordingButton.text = "STOP"
-        pauseResumeRecordingButton.text = "PAUSE"
-        pauseResumeRecordingButton.visibility = View.VISIBLE
-        noiseSuppressorSwitch.isEnabled = false
+        binding.messageTextView.visibility = View.GONE
+        binding.recordingTextView.text = "Recording..."
+        binding.recordingTextView.visibility = View.VISIBLE
+        binding.startStopRecordingButton.text = "STOP"
+        binding.pauseResumeRecordingButton.text = "PAUSE"
+        binding.pauseResumeRecordingButton.visibility = View.VISIBLE
+        binding.noiseSuppressorSwitch.isEnabled = false
     }
 
     private fun stopRecording() {
         isRecording = false
         isPaused = false
-        recordingTextView.visibility = View.GONE
-        messageTextView.visibility = View.VISIBLE
-        pauseResumeRecordingButton.visibility = View.GONE
-        showAmplitudeSwitch.isChecked = false
+        binding.recordingTextView.visibility = View.GONE
+        binding.messageTextView.visibility = View.VISIBLE
+        binding.pauseResumeRecordingButton.visibility = View.GONE
+        binding.showAmplitudeSwitch.isChecked = false
         Toast.makeText(this, "File saved at : $filePath", Toast.LENGTH_LONG).show()
-        startStopRecordingButton.text = "START"
-        noiseSuppressorSwitch.isEnabled = true
+        binding.startStopRecordingButton.text = "START"
+        binding.noiseSuppressorSwitch.isEnabled = true
     }
 
     private fun pauseRecording() {
-        recordingTextView.text = "PAUSE"
-        pauseResumeRecordingButton.text = "RESUME"
+        binding.recordingTextView.text = "PAUSE"
+        binding.pauseResumeRecordingButton.text = "RESUME"
         isPaused = true
     }
 
