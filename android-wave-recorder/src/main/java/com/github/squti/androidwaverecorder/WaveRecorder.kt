@@ -29,10 +29,13 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.media.audiofx.NoiseSuppressor
+import android.os.Build
+import androidx.annotation.RequiresApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.DataOutputStream
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -82,48 +85,50 @@ class WaveRecorder(private var filePath: String) {
     private var isPaused = false
     private lateinit var audioRecorder: AudioRecord
     private var noiseSuppressor: NoiseSuppressor? = null
-    private var timeModulus = 1
-
 
     /**
      * Starts audio recording asynchronously and writes recorded data chunks on storage.
      */
-    @SuppressLint("MissingPermission")
     fun startRecording() {
-
         if (!isAudioRecorderInitialized()) {
-            audioRecorder = AudioRecord(
-                MediaRecorder.AudioSource.MIC,
+            initializeAudioRecorder()
+            GlobalScope.launch(Dispatchers.IO) {
+                if (waveConfig.audioEncoding == AudioFormat.ENCODING_PCM_FLOAT) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        writeFloatAudioDataToStorage()
+                    } else {
+                        throw UnsupportedOperationException("Float audio is not supported on this version of Android. You need Android Android 6.0 or above")
+                    }
+                } else
+                    writeAudioDataToStorage()
+            }
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun initializeAudioRecorder() {
+        audioRecorder = AudioRecord(
+            MediaRecorder.AudioSource.MIC,
+            waveConfig.sampleRate,
+            waveConfig.channels,
+            waveConfig.audioEncoding,
+            AudioRecord.getMinBufferSize(
                 waveConfig.sampleRate,
                 waveConfig.channels,
-                waveConfig.audioEncoding,
-                AudioRecord.getMinBufferSize(
-                    waveConfig.sampleRate,
-                    waveConfig.channels,
-                    waveConfig.audioEncoding
-                )
+                waveConfig.audioEncoding
             )
-            timeModulus = bitPerSample(waveConfig.audioEncoding) * waveConfig.sampleRate / 8
-            if (waveConfig.channels == AudioFormat.CHANNEL_IN_STEREO)
-                timeModulus *= 2
+        )
 
-            audioSessionId = audioRecorder.audioSessionId
+        audioSessionId = audioRecorder.audioSessionId
+        isRecording = true
+        audioRecorder.startRecording()
 
-            isRecording = true
+        if (noiseSuppressorActive) {
+            noiseSuppressor = NoiseSuppressor.create(audioRecorder.audioSessionId)
+        }
 
-            audioRecorder.startRecording()
-
-            if (noiseSuppressorActive) {
-                noiseSuppressor = NoiseSuppressor.create(audioRecorder.audioSessionId)
-            }
-
-            onStateChangeListener?.let {
-                it(RecorderState.RECORDING)
-            }
-
-            GlobalScope.launch(Dispatchers.IO) {
-                writeAudioDataToStorage()
-            }
+        onStateChangeListener?.let {
+            it(RecorderState.RECORDING)
         }
     }
 
@@ -144,10 +149,18 @@ class WaveRecorder(private var filePath: String) {
 
                 withContext(Dispatchers.Main) {
                     onAmplitudeListener?.let {
-                        it(calculateAmplitudeMax(data))
+                        it(
+                            calculateAmplitude(
+                                data = data,
+                                audioFormat = waveConfig.audioEncoding
+                            )
+                        )
                     }
                     onTimeElapsed?.let {
-                        val audioLengthInSeconds: Long = file.length() / timeModulus
+                        val audioLengthInSeconds = calculateElapsedTime(
+                            file,
+                            waveConfig
+                        )
                         it(audioLengthInSeconds)
                     }
                 }
@@ -160,14 +173,95 @@ class WaveRecorder(private var filePath: String) {
         noiseSuppressor?.release()
     }
 
-    private fun calculateAmplitudeMax(data: ByteArray): Int {
-        val shortData = ShortArray(data.size / 2)
-        ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
-            .get(shortData)
+    @RequiresApi(Build.VERSION_CODES.M)
+    private suspend fun writeFloatAudioDataToStorage() {
+        val bufferSize = AudioRecord.getMinBufferSize(
+            waveConfig.sampleRate,
+            waveConfig.channels,
+            waveConfig.audioEncoding
+        )
+        val data = FloatArray(bufferSize)
+        val file = File(filePath)
+        val outputStream = DataOutputStream(file.outputStream())
+        while (isRecording) {
+            val operationStatus = audioRecorder.read(data, 0, bufferSize, AudioRecord.READ_BLOCKING)
 
-        return shortData.maxOrNull()?.toInt() ?: 0
+            if (AudioRecord.ERROR_INVALID_OPERATION != operationStatus) {
+                if (!isPaused) {
+                    data.forEach {
+                        val bytes =
+                            ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putFloat(it)
+                                .array()
+                        outputStream.write(bytes)
+                    }
+                }
+
+                withContext(Dispatchers.Main) {
+                    onAmplitudeListener?.let {
+                        it(
+                            calculateAmplitude(data)
+                        )
+                    }
+                    onTimeElapsed?.let {
+                        val audioLengthInSeconds = calculateElapsedTime(
+                            file,
+                            waveConfig
+                        )
+                        it(audioLengthInSeconds)
+                    }
+                }
+
+
+            }
+        }
+
+        outputStream.close()
+        noiseSuppressor?.release()
     }
-    
+
+    private fun calculateAmplitude(data: ByteArray, audioFormat: Int): Int {
+        return when (audioFormat) {
+            AudioFormat.ENCODING_PCM_8BIT -> {
+                val scaleFactor = 32767.0 / 255.0
+                println(data.average().plus(128) * scaleFactor)
+                (data.average().plus(128) * scaleFactor).toInt()
+            }
+
+            AudioFormat.ENCODING_PCM_16BIT -> {
+                val shortData = ShortArray(data.size / 2)
+                ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(shortData)
+                shortData.maxOrNull()?.toInt() ?: 0
+            }
+
+            AudioFormat.ENCODING_PCM_32BIT -> {
+                val intData = IntArray(data.size / 4)
+                ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).asIntBuffer().get(intData)
+                val maxAmplitude = intData.maxOrNull() ?: 0
+                val scaledAmplitude = ((maxAmplitude / Int.MAX_VALUE.toFloat()) * 32768).toInt()
+                scaledAmplitude
+            }
+
+            else -> throw IllegalArgumentException("Unsupported audio format for encoding $audioFormat bit")
+        }
+    }
+
+    private fun calculateAmplitude(data: FloatArray): Int {
+        val maxFloatAmplitude = data.maxOrNull() ?: 0f
+        return (maxFloatAmplitude * 32768).toInt()
+    }
+
+    private fun calculateElapsedTime(audioFile: File, waveConfig: WaveConfig): Long {
+        val bytesPerSample = bitPerSample(waveConfig.audioEncoding) / 8
+        val channelNumbers = when (waveConfig.channels) {
+            AudioFormat.CHANNEL_IN_MONO -> 1
+            AudioFormat.CHANNEL_IN_STEREO -> 2
+            else -> throw IllegalArgumentException("Unsupported audio channel")
+        }
+        val totalSamplesRead = (audioFile.length() / bytesPerSample) / channelNumbers
+        return (totalSamplesRead / waveConfig.sampleRate)
+    }
+
+
     /** Changes @property filePath to @param newFilePath
      * Calling this method while still recording throws an IllegalStateException
      */

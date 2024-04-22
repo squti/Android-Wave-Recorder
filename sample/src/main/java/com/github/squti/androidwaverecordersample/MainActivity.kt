@@ -26,6 +26,7 @@ package com.github.squti.androidwaverecordersample
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.media.AudioFormat
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -33,13 +34,9 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.lifecycleScope
 import com.github.squti.androidwaverecorder.RecorderState
 import com.github.squti.androidwaverecorder.WaveRecorder
 import com.github.squti.androidwaverecordersample.databinding.ActivityMainBinding
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -57,9 +54,13 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        filePath = externalCacheDir?.absolutePath + "/audioFile.wav"
+        filePath = filesDir.absolutePath + "/audioFile.wav"
 
         waveRecorder = WaveRecorder(filePath)
+        waveRecorder.waveConfig.sampleRate = 44100
+        waveRecorder.waveConfig.channels = AudioFormat.CHANNEL_IN_STEREO
+        waveRecorder.waveConfig.audioEncoding = AudioFormat.ENCODING_PCM_FLOAT
+
 
         waveRecorder.onStateChangeListener = {
             when (it) {
@@ -107,7 +108,7 @@ class MainActivity : AppCompatActivity() {
                 binding.amplitudeTextView.text = "Amplitude : 0"
                 binding.amplitudeTextView.visibility = View.VISIBLE
                 waveRecorder.onAmplitudeListener = {
-                        binding.amplitudeTextView.text = "Amplitude : $it"
+                    binding.amplitudeTextView.text = "Amplitude : $it"
                 }
 
             } else {
@@ -159,6 +160,7 @@ class MainActivity : AppCompatActivity() {
         requestCode: Int,
         permissions: Array<String>, grantResults: IntArray
     ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         when (requestCode) {
             PERMISSIONS_REQUEST_RECORD_AUDIO -> {
                 if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
