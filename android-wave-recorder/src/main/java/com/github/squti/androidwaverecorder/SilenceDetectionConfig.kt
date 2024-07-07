@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright (c) 2019 squti
+ * Copyright (c) 2024 squti
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,30 +24,15 @@
 
 package com.github.squti.androidwaverecorder
 
-import android.media.AudioFormat
-
 /**
- * Configuration for recording file.
- * @property [sampleRate] the number of samples that audio carried per second.
- * @property [channels] number and position of sound source when the sound is recording.
- * @property [audioEncoding] size of data per sample.
+ * Configuration for silence detection and handling during audio recording.
+ *
+ * @property [minAmplitudeThreshold] The minimum amplitude level (1 to 32767) considered as non-silent.
+ * @property [bufferDurationInMillis] The duration (in milliseconds) of audio data buffered when silence is detected. It captures the last seconds of silence.
+ * @property [preSilenceDurationInMillis] The duration (in milliseconds) of audio data recorded before silence is detected. It captures the last seconds leading up to silence.
  */
-data class WaveConfig(
-    var sampleRate: Int = 16000,
-    var channels: Int = AudioFormat.CHANNEL_IN_MONO,
-    var audioEncoding: Int = AudioFormat.ENCODING_PCM_16BIT
+data class SilenceDetectionConfig(
+    var minAmplitudeThreshold: Int,
+    var bufferDurationInMillis: Long = 2000,
+    var preSilenceDurationInMillis: Long = 2000,
 )
-
-internal fun bitPerSample(audioEncoding: Int) = when (audioEncoding) {
-    AudioFormat.ENCODING_PCM_8BIT -> 8
-    AudioFormat.ENCODING_PCM_16BIT -> 16
-    AudioFormat.ENCODING_PCM_32BIT -> 32
-    AudioFormat.ENCODING_PCM_FLOAT -> 32
-    else -> throw IllegalArgumentException("Unsupported audio format for encoding $audioEncoding")
-}
-
-internal fun channelCount(channels: Int) = when (channels) {
-    AudioFormat.CHANNEL_IN_MONO -> 1
-    AudioFormat.CHANNEL_IN_STEREO -> 2
-    else -> throw IllegalArgumentException("Unsupported audio channel")
-}

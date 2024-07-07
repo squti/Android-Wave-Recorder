@@ -31,14 +31,17 @@ import android.media.MediaRecorder
 import android.media.audiofx.NoiseSuppressor
 import android.os.Build
 import androidx.annotation.RequiresApi
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.DataOutputStream
 import java.io.File
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
+import java.io.OutputStream
+import java.util.LinkedList
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * The WaveRecorder class used to record Waveform audio file using AudioRecord class to get the audio stream in PCM encoding
@@ -51,6 +54,11 @@ class WaveRecorder(private var filePath: String) {
      * Configuration for recording audio file.
      */
     var waveConfig: WaveConfig = WaveConfig()
+
+    /**
+     * Configuration for Silence Detection.
+     */
+    var silenceDetectionConfig: SilenceDetectionConfig = SilenceDetectionConfig(30)
 
     /**
      * Register a callback to be invoked in every recorded chunk of audio data
@@ -69,6 +77,11 @@ class WaveRecorder(private var filePath: String) {
     var onTimeElapsed: ((Long) -> Unit)? = null
 
     /**
+     * Register a callback to get elapsed recording time in milliseconds
+     */
+    var onTimeElapsedInMillis: ((Long) -> Unit)? = null
+
+    /**
      * Activates Noise Suppressor during recording if the device implements noise
      * suppression.
      */
@@ -81,14 +94,22 @@ class WaveRecorder(private var filePath: String) {
     var audioSessionId: Int = -1
         private set
 
-    private var isRecording = false
-    private var isPaused = false
+    /**
+     * Activates Silence Detection during recording
+     */
+    var silenceDetection: Boolean = false
+
+    private var isPaused = AtomicBoolean(false)
+    private var isSkipping = AtomicBoolean(false)
     private lateinit var audioRecorder: AudioRecord
     private var noiseSuppressor: NoiseSuppressor? = null
+    private var silenceDuration = 0L
+    private var currentState: RecorderState = RecorderState.STOP
 
     /**
      * Starts audio recording asynchronously and writes recorded data chunks on storage.
      */
+    @OptIn(DelicateCoroutinesApi::class)
     fun startRecording() {
         if (!isAudioRecorderInitialized()) {
             initializeAudioRecorder()
@@ -100,7 +121,7 @@ class WaveRecorder(private var filePath: String) {
                         throw UnsupportedOperationException("Float audio is not supported on this version of Android. You need Android Android 6.0 or above")
                     }
                 } else
-                    writeAudioDataToStorage()
+                    writeByteAudioDataToStorage()
             }
         }
     }
@@ -120,153 +141,204 @@ class WaveRecorder(private var filePath: String) {
         )
 
         audioSessionId = audioRecorder.audioSessionId
-        isRecording = true
         audioRecorder.startRecording()
 
         if (noiseSuppressorActive) {
             noiseSuppressor = NoiseSuppressor.create(audioRecorder.audioSessionId)
         }
-
-        onStateChangeListener?.let {
-            it(RecorderState.RECORDING)
-        }
     }
 
-    private suspend fun writeAudioDataToStorage() {
-        val bufferSize = AudioRecord.getMinBufferSize(
-            waveConfig.sampleRate,
-            waveConfig.channels,
-            waveConfig.audioEncoding
-        )
+    private suspend fun writeByteAudioDataToStorage() {
+        val bufferSize = calculateMinBufferSize(waveConfig)
         val data = ByteArray(bufferSize)
         val file = File(filePath)
-        val outputStream = file.outputStream()
-        while (isRecording) {
+        val outputStream = DataOutputStream(file.outputStream())
+        val fileWriter = FileWriter(outputStream)
+
+        val bufferSizeToKeep =
+            (waveConfig.sampleRate * channelCount(waveConfig.channels) * (bitPerSample(waveConfig.audioEncoding) / 8) * silenceDetectionConfig.bufferDurationInMillis / 1000).toInt()
+
+        val lastSkippedData = LinkedList<ByteArray>()
+
+        while (audioRecorder.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
             val operationStatus = audioRecorder.read(data, 0, bufferSize)
 
-            if (AudioRecord.ERROR_INVALID_OPERATION != operationStatus) {
-                if (!isPaused) outputStream.write(data)
+            if (operationStatus != AudioRecord.ERROR_INVALID_OPERATION) {
+                val amplitude = getByteArrayAmplitude(data)
 
-                withContext(Dispatchers.Main) {
-                    onAmplitudeListener?.let {
-                        it(
-                            calculateAmplitude(
-                                data = data,
-                                audioFormat = waveConfig.audioEncoding
-                            )
+                if (isPaused.get())
+                    updateState(RecorderState.PAUSE)
+                else {
+
+                    if (silenceDetection) {
+                        handleByteSilenceState(
+                            amplitude,
+                            lastSkippedData,
+                            data,
+                            bufferSizeToKeep
                         )
                     }
-                    onTimeElapsed?.let {
-                        val audioLengthInSeconds = calculateElapsedTime(
-                            file,
-                            waveConfig
-                        )
-                        it(audioLengthInSeconds)
+
+                    if (!isSkipping.get()) {
+                        updateState(RecorderState.RECORDING)
+                        fileWriter.writeDataToStream(lastSkippedData, data)
                     }
                 }
 
-
+                updateListeners(amplitude, file)
             }
         }
-
-        outputStream.close()
-        noiseSuppressor?.release()
+        updateState(RecorderState.STOP)
+        cleanup(outputStream)
     }
 
     @RequiresApi(Build.VERSION_CODES.M)
     private suspend fun writeFloatAudioDataToStorage() {
-        val bufferSize = AudioRecord.getMinBufferSize(
-            waveConfig.sampleRate,
-            waveConfig.channels,
-            waveConfig.audioEncoding
-        )
+        val bufferSize = calculateMinBufferSize(waveConfig)
         val data = FloatArray(bufferSize)
         val file = File(filePath)
         val outputStream = DataOutputStream(file.outputStream())
-        while (isRecording) {
+        val fileWriter = FileWriter(outputStream)
+
+        val bufferSizeToKeep =
+            (waveConfig.sampleRate * channelCount(waveConfig.channels) * silenceDetectionConfig.bufferDurationInMillis / 1000).toInt()
+
+        val lastSkippedData = LinkedList<FloatArray>()
+
+        while (audioRecorder.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
             val operationStatus = audioRecorder.read(data, 0, bufferSize, AudioRecord.READ_BLOCKING)
 
             if (AudioRecord.ERROR_INVALID_OPERATION != operationStatus) {
-                if (!isPaused) {
-                    data.forEach {
-                        val bytes =
-                            ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putFloat(it)
-                                .array()
-                        outputStream.write(bytes)
-                    }
-                }
+                val amplitude = getFloatArrayAmplitude(data)
 
-                withContext(Dispatchers.Main) {
-                    onAmplitudeListener?.let {
-                        it(
-                            calculateAmplitude(data)
+                if (isPaused.get())
+                    updateState(RecorderState.PAUSE)
+                else {
+
+                    if (silenceDetection) {
+                        handleFloatSilenceState(
+                            amplitude,
+                            lastSkippedData,
+                            data,
+                            bufferSizeToKeep
                         )
                     }
-                    onTimeElapsed?.let {
-                        val audioLengthInSeconds = calculateElapsedTime(
-                            file,
-                            waveConfig
-                        )
-                        it(audioLengthInSeconds)
+
+                    if (!isSkipping.get()) {
+                        updateState(RecorderState.RECORDING)
+                        fileWriter.writeDataToStream(lastSkippedData, data)
                     }
                 }
-
-
+                updateListeners(amplitude, file)
             }
         }
+        updateState(RecorderState.STOP)
+        cleanup(outputStream)
+    }
 
+    private fun getByteArrayAmplitude(data: ByteArray): Int {
+        return if (onAmplitudeListener != null || silenceDetection) calculateAmplitude(
+            data = data,
+            audioFormat = waveConfig.audioEncoding
+        ) else 0
+    }
+
+    private fun getFloatArrayAmplitude(data: FloatArray): Int {
+        return if (onAmplitudeListener != null || silenceDetection) calculateAmplitude(
+            data = data,
+        ) else 0
+    }
+
+    private suspend fun handleByteSilenceState(
+        amplitude: Int,
+        lastSkippedData: LinkedList<ByteArray>,
+        data: ByteArray,
+        bufferSizeToKeep: Int
+    ) {
+        if (amplitude < silenceDetectionConfig.minAmplitudeThreshold) {
+            silenceDuration += calculateDurationInMillis(data, waveConfig)
+            if (silenceDuration >= silenceDetectionConfig.preSilenceDurationInMillis) {
+                if (!isSkipping.get()) {
+                    isSkipping.set(true)
+                    updateState(RecorderState.SKIPPING_SILENCE)
+                }
+                lastSkippedData.addLast(data.copyOf())
+                if (lastSkippedData.sumOf { it.size } > bufferSizeToKeep) {
+                    lastSkippedData.removeFirst()
+                }
+            }
+        } else {
+            silenceDuration = 0L
+            isSkipping.set(false)
+        }
+    }
+
+    private suspend fun handleFloatSilenceState(
+        amplitude: Int,
+        lastSkippedData: LinkedList<FloatArray>,
+        data: FloatArray,
+        bufferSizeToKeep: Int
+    ) {
+        if (amplitude < silenceDetectionConfig.minAmplitudeThreshold) {
+            silenceDuration += calculateDurationInMillis(data, waveConfig)
+            if (silenceDuration >= silenceDetectionConfig.preSilenceDurationInMillis) {
+
+                if (!isSkipping.get()) {
+                    isSkipping.set(true)
+                    updateState(RecorderState.SKIPPING_SILENCE)
+                }
+                lastSkippedData.addLast(data.copyOf())
+                if (lastSkippedData.sumOf { it.size } > bufferSizeToKeep) {
+                    lastSkippedData.removeFirst()
+                }
+            }
+        } else {
+            silenceDuration = 0L
+            isSkipping.set(false)
+        }
+    }
+
+    private suspend fun updateListeners(amplitude: Int, file: File) {
+        withContext(Dispatchers.Main) {
+            onAmplitudeListener?.let {
+                it(amplitude)
+            }
+            onTimeElapsed?.let {
+                val audioLength =
+                    calculateDurationInMillis(file, waveConfig)
+                it(TimeUnit.MILLISECONDS.toSeconds(audioLength))
+            }
+            onTimeElapsedInMillis?.let {
+                val audioLength =
+                    calculateDurationInMillis(file, waveConfig)
+                it(audioLength)
+            }
+        }
+    }
+
+
+    private suspend fun updateState(state: RecorderState) {
+
+        if (currentState != state) {
+            currentState = state
+            withContext(Dispatchers.Main) {
+                onStateChangeListener?.let {
+                    it(state)
+                }
+            }
+        }
+    }
+
+    private fun cleanup(outputStream: OutputStream) {
         outputStream.close()
         noiseSuppressor?.release()
     }
-
-    private fun calculateAmplitude(data: ByteArray, audioFormat: Int): Int {
-        return when (audioFormat) {
-            AudioFormat.ENCODING_PCM_8BIT -> {
-                val scaleFactor = 32767.0 / 255.0
-                println(data.average().plus(128) * scaleFactor)
-                (data.average().plus(128) * scaleFactor).toInt()
-            }
-
-            AudioFormat.ENCODING_PCM_16BIT -> {
-                val shortData = ShortArray(data.size / 2)
-                ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(shortData)
-                shortData.maxOrNull()?.toInt() ?: 0
-            }
-
-            AudioFormat.ENCODING_PCM_32BIT -> {
-                val intData = IntArray(data.size / 4)
-                ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).asIntBuffer().get(intData)
-                val maxAmplitude = intData.maxOrNull() ?: 0
-                val scaledAmplitude = ((maxAmplitude / Int.MAX_VALUE.toFloat()) * 32768).toInt()
-                scaledAmplitude
-            }
-
-            else -> throw IllegalArgumentException("Unsupported audio format for encoding $audioFormat bit")
-        }
-    }
-
-    private fun calculateAmplitude(data: FloatArray): Int {
-        val maxFloatAmplitude = data.maxOrNull() ?: 0f
-        return (maxFloatAmplitude * 32768).toInt()
-    }
-
-    private fun calculateElapsedTime(audioFile: File, waveConfig: WaveConfig): Long {
-        val bytesPerSample = bitPerSample(waveConfig.audioEncoding) / 8
-        val channelNumbers = when (waveConfig.channels) {
-            AudioFormat.CHANNEL_IN_MONO -> 1
-            AudioFormat.CHANNEL_IN_STEREO -> 2
-            else -> throw IllegalArgumentException("Unsupported audio channel")
-        }
-        val totalSamplesRead = (audioFile.length() / bytesPerSample) / channelNumbers
-        return (totalSamplesRead / waveConfig.sampleRate)
-    }
-
 
     /** Changes @property filePath to @param newFilePath
      * Calling this method while still recording throws an IllegalStateException
      */
     fun changeFilePath(newFilePath: String) {
-        if (isRecording)
+        if (audioRecorder.recordingState == AudioRecord.RECORDSTATE_RECORDING)
             throw IllegalStateException("Cannot change filePath when still recording.")
         else
             filePath = newFilePath
@@ -276,17 +348,14 @@ class WaveRecorder(private var filePath: String) {
      * Stops audio recorder and release resources then writes recorded file headers.
      */
     fun stopRecording() {
-
         if (isAudioRecorderInitialized()) {
-            isRecording = false
-            isPaused = false
             audioRecorder.stop()
             audioRecorder.release()
+            isPaused.set(false)
+            isSkipping.set(false)
+            silenceDuration = 0L
             audioSessionId = -1
             WaveHeaderWriter(filePath, waveConfig).writeHeader()
-            onStateChangeListener?.let {
-                it(RecorderState.STOP)
-            }
         }
 
     }
@@ -295,17 +364,13 @@ class WaveRecorder(private var filePath: String) {
         this::audioRecorder.isInitialized && audioRecorder.state == AudioRecord.STATE_INITIALIZED
 
     fun pauseRecording() {
-        isPaused = true
-        onStateChangeListener?.let {
-            it(RecorderState.PAUSE)
-        }
+        isPaused.set(true)
     }
 
     fun resumeRecording() {
-        isPaused = false
-        onStateChangeListener?.let {
-            it(RecorderState.RECORDING)
-        }
+        silenceDuration = 0L
+        isSkipping.set(false)
+        isPaused.set(false)
     }
 
 }

@@ -35,9 +35,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.github.squti.androidwaverecorder.RecorderState
+import com.github.squti.androidwaverecorder.SilenceDetectionConfig
 import com.github.squti.androidwaverecorder.WaveRecorder
 import com.github.squti.androidwaverecordersample.databinding.ActivityMainBinding
-import java.util.*
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
@@ -58,20 +59,24 @@ class MainActivity : AppCompatActivity() {
 
         waveRecorder = WaveRecorder(filePath)
         waveRecorder.waveConfig.sampleRate = 44100
-        waveRecorder.waveConfig.channels = AudioFormat.CHANNEL_IN_STEREO
-        waveRecorder.waveConfig.audioEncoding = AudioFormat.ENCODING_PCM_FLOAT
+        waveRecorder.waveConfig.channels = AudioFormat.CHANNEL_IN_MONO
+        waveRecorder.waveConfig.audioEncoding = AudioFormat.ENCODING_PCM_32BIT
+        waveRecorder.silenceDetectionConfig = SilenceDetectionConfig(minAmplitudeThreshold = 80)
+
 
 
         waveRecorder.onStateChangeListener = {
+            Log.d("RecorderState : ", it.name)
+
             when (it) {
                 RecorderState.RECORDING -> startRecording()
                 RecorderState.STOP -> stopRecording()
                 RecorderState.PAUSE -> pauseRecording()
+                RecorderState.SKIPPING_SILENCE -> skipRecording()
             }
         }
-        waveRecorder.onTimeElapsed = {
-            Log.e(TAG, "onCreate: time elapsed $it")
-            binding.timeTextView.text = formatTimeUnit(it * 1000)
+        waveRecorder.onTimeElapsedInMillis = {
+            binding.timeTextView.text = formatTimeUnit(it)
         }
 
         binding.startStopRecordingButton.setOnClickListener {
@@ -108,6 +113,7 @@ class MainActivity : AppCompatActivity() {
                 binding.amplitudeTextView.text = "Amplitude : 0"
                 binding.amplitudeTextView.visibility = View.VISIBLE
                 waveRecorder.onAmplitudeListener = {
+                    Log.d("Amplitude", "Amplitude : $it")
                     binding.amplitudeTextView.text = "Amplitude : $it"
                 }
 
@@ -115,6 +121,13 @@ class MainActivity : AppCompatActivity() {
                 waveRecorder.onAmplitudeListener = null
                 binding.amplitudeTextView.visibility = View.GONE
             }
+        }
+
+        binding.silenceDetectionSwitch.setOnCheckedChangeListener { _, isChecked ->
+            waveRecorder.silenceDetection = isChecked
+            if (isChecked)
+                Toast.makeText(this, "Noise Suppressor Activated", Toast.LENGTH_SHORT).show()
+
         }
 
         binding.noiseSuppressorSwitch.setOnCheckedChangeListener { _, isChecked ->
@@ -126,7 +139,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startRecording() {
-        Log.d(TAG, waveRecorder.audioSessionId.toString())
+        Log.d(TAG, "Recording Started")
         isRecording = true
         isPaused = false
         binding.messageTextView.visibility = View.GONE
@@ -138,7 +151,20 @@ class MainActivity : AppCompatActivity() {
         binding.noiseSuppressorSwitch.isEnabled = false
     }
 
+    private fun skipRecording() {
+        Log.d(TAG, "Recording Skipped")
+        isRecording = true
+        isPaused = false
+        binding.messageTextView.visibility = View.GONE
+        binding.recordingTextView.text = "Skipping..."
+        binding.recordingTextView.visibility = View.VISIBLE
+        binding.startStopRecordingButton.text = "STOP"
+        binding.pauseResumeRecordingButton.visibility = View.INVISIBLE
+        binding.noiseSuppressorSwitch.isEnabled = false
+    }
+
     private fun stopRecording() {
+        Log.d(TAG, "Recording Stopped")
         isRecording = false
         isPaused = false
         binding.recordingTextView.visibility = View.GONE
@@ -151,6 +177,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun pauseRecording() {
+        Log.d(TAG, "Recording Paused")
         binding.recordingTextView.text = "PAUSE"
         binding.pauseResumeRecordingButton.text = "RESUME"
         isPaused = true
@@ -182,14 +209,15 @@ class MainActivity : AppCompatActivity() {
         return try {
             String.format(
                 Locale.getDefault(),
-                "%02d:%02d",
+                "%02d:%02d:%03d",
                 TimeUnit.MILLISECONDS.toMinutes(timeInMilliseconds),
                 TimeUnit.MILLISECONDS.toSeconds(timeInMilliseconds) - TimeUnit.MINUTES.toSeconds(
                     TimeUnit.MILLISECONDS.toMinutes(timeInMilliseconds)
-                )
+                ),
+                timeInMilliseconds % 1000
             )
         } catch (e: Exception) {
-            "00:00"
+            "00:00:000"
         }
     }
 }

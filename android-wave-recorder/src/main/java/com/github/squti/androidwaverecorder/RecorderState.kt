@@ -25,5 +25,5 @@
 package com.github.squti.androidwaverecorder
 
 enum class RecorderState {
-    RECORDING, PAUSE, STOP
+    RECORDING, PAUSE, STOP, SKIPPING_SILENCE
 }
