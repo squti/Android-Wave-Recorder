@@ -35,7 +35,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.github.squti.androidwaverecorder.RecorderState
-import com.github.squti.androidwaverecorder.SilenceDetectionConfig
 import com.github.squti.androidwaverecorder.WaveRecorder
 import com.github.squti.androidwaverecordersample.databinding.ActivityMainBinding
 import java.util.Locale
@@ -58,10 +57,15 @@ class MainActivity : AppCompatActivity() {
         filePath = filesDir.absolutePath + "/audioFile.wav"
 
         waveRecorder = WaveRecorder(filePath)
-        waveRecorder.waveConfig.sampleRate = 44100
-        waveRecorder.waveConfig.channels = AudioFormat.CHANNEL_IN_MONO
-        waveRecorder.waveConfig.audioEncoding = AudioFormat.ENCODING_PCM_32BIT
-        waveRecorder.silenceDetectionConfig = SilenceDetectionConfig(minAmplitudeThreshold = 80)
+            .configureWaveSettings {
+                sampleRate = 44100
+                channels = AudioFormat.CHANNEL_IN_STEREO
+                audioEncoding = AudioFormat.ENCODING_PCM_32BIT
+            }.configureSilenceDetection {
+                minAmplitudeThreshold = 80
+                bufferDurationInMillis = 1500
+                preSilenceDurationInMillis = 1500
+            }
 
 
 

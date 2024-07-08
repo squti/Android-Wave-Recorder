@@ -53,12 +53,12 @@ class WaveRecorder(private var filePath: String) {
     /**
      * Configuration for recording audio file.
      */
+    @Deprecated(
+        "Use configureWaveSettings to set recording configuration. Access to this property will not be available in the future."
+    )
     var waveConfig: WaveConfig = WaveConfig()
 
-    /**
-     * Configuration for Silence Detection.
-     */
-    var silenceDetectionConfig: SilenceDetectionConfig = SilenceDetectionConfig(30)
+    private var silenceDetectionConfig: SilenceDetectionConfig = SilenceDetectionConfig(30)
 
     /**
      * Register a callback to be invoked in every recorded chunk of audio data
@@ -105,6 +105,22 @@ class WaveRecorder(private var filePath: String) {
     private var noiseSuppressor: NoiseSuppressor? = null
     private var silenceDuration = 0L
     private var currentState: RecorderState = RecorderState.STOP
+
+    /**
+     * Set configuration for recording audio file.
+     */
+    fun configureWaveSettings(block: WaveConfig.() -> Unit): WaveRecorder {
+        waveConfig.apply(block)
+        return this
+    }
+
+    /**
+     * Set configuration for Silence Detection.
+     */
+    fun configureSilenceDetection(block: SilenceDetectionConfig.() -> Unit): WaveRecorder {
+        silenceDetectionConfig.apply(block)
+        return this
+    }
 
     /**
      * Starts audio recording asynchronously and writes recorded data chunks on storage.
