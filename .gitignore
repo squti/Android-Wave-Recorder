@@ -1,3 +1,18 @@
+# Gradle
+.gradle/
+build/
+captures/
+.externalNativeBuild/
+cxx/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+.idea_modules/
+
+# Android
 *.apk
 *.ap_
 *.aab
@@ -7,23 +22,17 @@ gen/
 out/
 sample/release/
 sample/develop/
-.gradle/
-build/
-local.properties
 proguard/
 *.log
 .navigation/
-captures/
-*.iml
-.idea/workspace.xml
-.idea/tasks.xml
-.idea/gradle.xml
-.idea/assetWizardSettings.xml
-.idea/dictionaries
-.idea/libraries
-.idea/caches
- in.
+
+# macOS
+.DS_Store
+
+# Android Studio
+local.properties
+
+# Keystore files
 *.jks
 *.keystore
-.externalNativeBuild
 google-services.json
