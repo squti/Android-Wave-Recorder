@@ -27,6 +27,8 @@ package com.github.squti.androidwaverecorder
 import android.media.AudioFormat
 import android.media.AudioRecord
 import java.io.File
+import java.math.BigDecimal
+import java.math.MathContext
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -69,26 +71,38 @@ internal fun calculateAmplitude(data: FloatArray): Int {
     return (maxFloatAmplitude * 32768).toInt()
 }
 
-internal fun calculateDurationInMillis(data: ByteArray, waveConfig: WaveConfig): Long {
+internal fun calculateDurationInMillis(data: ByteArray, waveConfig: WaveConfig): BigDecimal {
     return when (waveConfig.audioEncoding) {
         AudioFormat.ENCODING_PCM_8BIT -> {
-            (data.size / 1 / channelCount(waveConfig.channels) / waveConfig.sampleRate.toFloat() * 1000).toLong()
+            BigDecimal(data.size).divide(
+                BigDecimal(1 * channelCount(waveConfig.channels) * waveConfig.sampleRate),
+                MathContext.DECIMAL64
+            ) * BigDecimal(1000)
         }
 
         AudioFormat.ENCODING_PCM_16BIT -> {
-            (data.size / 2 / channelCount(waveConfig.channels) / waveConfig.sampleRate.toFloat() * 1000).toLong()
+            BigDecimal(data.size).divide(
+                BigDecimal(2 * channelCount(waveConfig.channels) * waveConfig.sampleRate),
+                MathContext.DECIMAL64
+            ) * BigDecimal(1000)
         }
 
         AudioFormat.ENCODING_PCM_32BIT -> {
-            (data.size / 4 / channelCount(waveConfig.channels) / waveConfig.sampleRate.toFloat() * 1000).toLong()
+            BigDecimal(data.size).divide(
+                BigDecimal(4 * channelCount(waveConfig.channels) * waveConfig.sampleRate),
+                MathContext.DECIMAL64
+            ) * BigDecimal(1000)
         }
 
         else -> throw IllegalArgumentException("Unsupported audio format for encoding ${waveConfig.audioEncoding}")
     }
 }
 
-internal fun calculateDurationInMillis(data: FloatArray, waveConfig: WaveConfig): Long {
-    return (data.size / channelCount(waveConfig.channels) / waveConfig.sampleRate.toFloat() * 1000).toLong()
+internal fun calculateDurationInMillis(data: FloatArray, waveConfig: WaveConfig): BigDecimal {
+    return BigDecimal(data.size).divide(
+        BigDecimal(channelCount(waveConfig.channels) * waveConfig.sampleRate),
+        MathContext.DECIMAL64
+    ) * BigDecimal(1000)
 }
 
 internal fun calculateDurationInMillis(audioFile: File, waveConfig: WaveConfig): Long {

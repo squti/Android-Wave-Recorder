@@ -143,6 +143,22 @@
         app:layout_constraintStart_toEndOf="@+id/noiseSuppressorSwitch"
         app:layout_constraintTop_toTopOf="@+id/noiseSuppressorSwitch" />
 
+    <Switch
+        android:id="@+id/saveToExternalStorageSwitch"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="@+id/noiseSuppressorSwitch"
+        app:layout_constraintTop_toBottomOf="@+id/noiseSuppressorSwitch" />
+
+    <TextView
+        android:id="@+id/saveToExternalStorageTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Save To External Storage"
+        app:layout_constraintBottom_toBottomOf="@+id/saveToExternalStorageSwitch"
+        app:layout_constraintStart_toEndOf="@+id/saveToExternalStorageSwitch"
+        app:layout_constraintTop_toTopOf="@+id/saveToExternalStorageSwitch" />
+
     <TextView
         android:id="@+id/amplitudeTextView"
         android:layout_width="wrap_content"

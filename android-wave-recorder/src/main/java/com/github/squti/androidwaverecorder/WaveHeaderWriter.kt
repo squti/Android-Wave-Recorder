@@ -24,14 +24,38 @@
 
 package com.github.squti.androidwaverecorder
 
+import android.content.Context
 import android.media.AudioFormat
+import android.net.Uri
 import java.io.File
+import java.io.FileInputStream
 import java.io.RandomAccessFile
 
-internal class WaveHeaderWriter(private val filePath: String, private val waveConfig: WaveConfig) {
+class WaveHeaderWriter {
+    private var fileUri: Uri? = null
+    private var filePath: String? = null
+    private lateinit var context: Context
+    private var waveConfig: WaveConfig
+
+    constructor(fileUri: Uri, context: Context, waveConfig: WaveConfig) {
+        this.fileUri = fileUri
+        this.context = context
+        this.waveConfig = waveConfig
+    }
+
+    constructor(filePath: String, waveConfig: WaveConfig) {
+        this.filePath = filePath
+        this.waveConfig = waveConfig
+    }
 
     fun writeHeader() {
-        val inputStream = File(filePath).inputStream()
+        val inputStream: FileInputStream = if (fileUri != null) {
+            val fileDescriptor =
+                context.contentResolver.openFileDescriptor(fileUri!!, "rw")?.fileDescriptor
+            FileInputStream(fileDescriptor)
+        } else {
+            File(filePath!!).inputStream()
+        }
         val totalAudioLen = inputStream.channel.size() - 44
         val totalDataLen = totalAudioLen + 36
         val channels = if (waveConfig.channels == AudioFormat.CHANNEL_IN_MONO)
@@ -52,10 +76,16 @@ internal class WaveHeaderWriter(private val filePath: String, private val waveCo
             waveConfig.audioEncoding == AudioFormat.ENCODING_PCM_FLOAT
         )
 
-        val randomAccessFile = RandomAccessFile(File(filePath), "rw")
-        randomAccessFile.seek(0)
-        randomAccessFile.write(header)
-        randomAccessFile.close()
+        if (fileUri != null) {
+            val outputStream = context.contentResolver.openOutputStream(fileUri!!, "rw")
+            outputStream?.write(header)
+            outputStream?.close()
+        } else {
+            val randomAccessFile = RandomAccessFile(File(filePath!!), "rw")
+            randomAccessFile.seek(0)
+            randomAccessFile.write(header)
+            randomAccessFile.close()
+        }
     }
 
     private fun getWavFileHeaderByteArray(
