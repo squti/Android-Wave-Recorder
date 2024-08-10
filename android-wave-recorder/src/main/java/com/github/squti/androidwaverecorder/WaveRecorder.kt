@@ -75,7 +75,7 @@ class WaveRecorder {
     )
     var waveConfig: WaveConfig = WaveConfig()
 
-    private var silenceDetectionConfig: SilenceDetectionConfig = SilenceDetectionConfig(30)
+    private var silenceDetectionConfig: SilenceDetectionConfig = SilenceDetectionConfig(1500)
 
     /**
      * Register a callback to be invoked in every recorded chunk of audio data
