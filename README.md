@@ -22,7 +22,7 @@ allprojects {
 Step 2. Add the following dependency to your module `build.gradle`:
 ```gradle
 dependencies{
-    implementation 'com.github.squti:Android-Wave-Recorder:2.0.0'
+    implementation 'com.github.squti:Android-Wave-Recorder:2.0.1'
 }
 ```
 ### Permission
