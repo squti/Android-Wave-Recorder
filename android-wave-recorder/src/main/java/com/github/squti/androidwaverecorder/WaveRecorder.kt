@@ -389,7 +389,7 @@ class WaveRecorder {
      * Calling this method while still recording throws an IllegalStateException
      */
     fun changeFilePath(newFilePath: String) {
-        if (audioRecorder.recordingState == AudioRecord.RECORDSTATE_RECORDING)
+        if (isAudioRecorderInitialized() && audioRecorder.recordingState == AudioRecord.RECORDSTATE_RECORDING)
             throw IllegalStateException("Cannot change filePath when still recording.")
         else
             filePath = newFilePath
@@ -399,7 +399,7 @@ class WaveRecorder {
      * Calling this method while still recording throws an IllegalStateException
      */
     fun changeFilePath(newFileUri: Uri) {
-        if (audioRecorder.recordingState == AudioRecord.RECORDSTATE_RECORDING)
+        if (isAudioRecorderInitialized() && audioRecorder.recordingState == AudioRecord.RECORDSTATE_RECORDING)
             throw IllegalStateException("Cannot change filePath when still recording.")
         else
             fileUri = newFileUri
