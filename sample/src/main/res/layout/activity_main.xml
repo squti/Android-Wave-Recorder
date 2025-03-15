@@ -163,8 +163,29 @@
         android:id="@+id/amplitudeTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
         android:textSize="20sp"
         app:layout_constraintStart_toStartOf="@+id/showAmplitudeSwitch"
-        app:layout_constraintTop_toBottomOf="@+id/silenceDetectionSwitch"
+        app:layout_constraintTop_toBottomOf="@+id/encodingLabelTextView"
         tools:text="Amplitude : " />
+
+    <Spinner
+        android:id="@+id/encodingSpinner"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="@+id/encodingLabelTextView"
+        app:layout_constraintStart_toEndOf="@+id/encodingLabelTextView"
+        app:layout_constraintTop_toTopOf="@+id/encodingLabelTextView"
+        />
+
+    <TextView
+        android:id="@+id/encodingLabelTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginLeft="16dp"
+        android:layout_marginTop="8dp"
+        android:text="Audio Encoding"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/silenceDetectionSwitch" />
 </androidx.constraintlayout.widget.ConstraintLayout>

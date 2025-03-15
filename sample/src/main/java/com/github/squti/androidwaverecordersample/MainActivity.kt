@@ -25,6 +25,7 @@
 package com.github.squti.androidwaverecordersample
 
 import android.Manifest
+import android.R
 import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Intent
@@ -38,6 +39,8 @@ import android.provider.MediaStore
 import android.provider.Settings
 import android.util.Log
 import android.view.View
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -59,12 +62,36 @@ class MainActivity : AppCompatActivity() {
     private var isRecording = false
     private var isPaused = false
     private lateinit var binding: ActivityMainBinding
-
+    private var selectedEncoding = AudioFormat.ENCODING_PCM_FLOAT
+    private val encodingOptions = listOf(
+        "8-bit" to AudioFormat.ENCODING_PCM_8BIT,
+        "16-bit" to AudioFormat.ENCODING_PCM_16BIT,
+        "32-bit" to AudioFormat.ENCODING_PCM_32BIT,
+        "Float 32-bit" to AudioFormat.ENCODING_PCM_FLOAT
+    )
+    private var isSaveToExternalStorageFlag = false
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        val encodingSpinner = binding.encodingSpinner
+        val adapter = ArrayAdapter(
+            this,
+            R.layout.simple_spinner_item,
+            encodingOptions.map { it.first } // Display names only
+        )
+        adapter.setDropDownViewResource(R.layout.simple_spinner_dropdown_item)
 
+        encodingSpinner.adapter = adapter
+        encodingSpinner.setSelection(encodingOptions.indexOfFirst { it.second == AudioFormat.ENCODING_PCM_FLOAT })
+        encodingSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                selectedEncoding = encodingOptions[position].second
+                initRecorder(isSaveToExternalStorageFlag)
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
         initRecorder(isSaveToExternalStorage = false)
 
         binding.saveToExternalStorageSwitch.setOnCheckedChangeListener { _, isChecked ->
@@ -185,6 +212,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initRecorder(isSaveToExternalStorage: Boolean) {
+        isSaveToExternalStorageFlag = isSaveToExternalStorage
         if (isSaveToExternalStorage)
             initWithExternalStorage("audioFile")
         else
@@ -217,6 +245,7 @@ class MainActivity : AppCompatActivity() {
         binding.pauseResumeRecordingButton.text = "PAUSE"
         binding.pauseResumeRecordingButton.visibility = View.VISIBLE
         binding.noiseSuppressorSwitch.isEnabled = false
+        binding.encodingSpinner.isEnabled = false
     }
 
     private fun skipRecording() {
@@ -229,6 +258,7 @@ class MainActivity : AppCompatActivity() {
         binding.startStopRecordingButton.text = "STOP"
         binding.pauseResumeRecordingButton.visibility = View.INVISIBLE
         binding.noiseSuppressorSwitch.isEnabled = false
+        binding.encodingSpinner.isEnabled = false
     }
 
     private fun stopRecording() {
@@ -240,6 +270,7 @@ class MainActivity : AppCompatActivity() {
         binding.pauseResumeRecordingButton.visibility = View.GONE
         binding.startStopRecordingButton.text = "START"
         binding.noiseSuppressorSwitch.isEnabled = true
+        binding.encodingSpinner.isEnabled = true
         resetSwitches()
         Toast.makeText(this, "File saved at : $filePath", Toast.LENGTH_LONG).show()
     }
@@ -332,7 +363,7 @@ class MainActivity : AppCompatActivity() {
                     .configureWaveSettings {
                         sampleRate = 44100
                         channels = AudioFormat.CHANNEL_IN_MONO
-                        audioEncoding = AudioFormat.ENCODING_PCM_FLOAT
+                        audioEncoding = selectedEncoding
                     }.configureSilenceDetection {
                         minAmplitudeThreshold = 2000
                         bufferDurationInMillis = 1500
@@ -353,7 +384,7 @@ class MainActivity : AppCompatActivity() {
             .configureWaveSettings {
                 sampleRate = 44100
                 channels = AudioFormat.CHANNEL_IN_MONO
-                audioEncoding = AudioFormat.ENCODING_PCM_FLOAT
+                audioEncoding = selectedEncoding
             }.configureSilenceDetection {
                 minAmplitudeThreshold = 2000
                 bufferDurationInMillis = 1500
