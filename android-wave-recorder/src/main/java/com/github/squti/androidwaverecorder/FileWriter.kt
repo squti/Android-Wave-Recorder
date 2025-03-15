@@ -34,33 +34,38 @@ internal class FileWriter(private val outputStream: DataOutputStream) {
         lastSkippedData: LinkedList<ByteArray>,
         data: ByteArray
     ) {
-        if (lastSkippedData.isNotEmpty()) {
-            lastSkippedData.forEach { outputStream.write(it) }
+        val totalSize = lastSkippedData.sumOf { it.size } + data.size
+        val byteBuffer = ByteBuffer.allocate(totalSize).order(ByteOrder.LITTLE_ENDIAN)
+
+        lastSkippedData.forEach { byteArray ->
+            byteBuffer.put(byteArray)
         }
+
+        byteBuffer.put(data)
+
+        outputStream.write(byteBuffer.array())
         lastSkippedData.clear()
-        outputStream.write(data)
     }
 
     fun writeDataToStream(
         lastSkippedData: LinkedList<FloatArray>,
         data: FloatArray
     ) {
-        if (lastSkippedData.isNotEmpty()) {
-            lastSkippedData.forEach { floatArray ->
-                floatArray.forEach {
-                    val bytes = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN)
-                        .putFloat(it).array()
-                    outputStream.write(bytes)
-                }
+        val totalFloats = lastSkippedData.sumOf { it.size } + data.size
+        val totalSize = totalFloats * 4
+        val byteBuffer = ByteBuffer.allocate(totalSize).order(ByteOrder.LITTLE_ENDIAN)
+
+        lastSkippedData.forEach { floatArray ->
+            floatArray.forEach { floatValue ->
+                byteBuffer.putFloat(floatValue)
             }
         }
-        lastSkippedData.clear()
-        data.forEach {
-            val bytes =
-                ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putFloat(it)
-                    .array()
-            outputStream.write(bytes)
+        data.forEach { floatValue ->
+            byteBuffer.putFloat(floatValue)
         }
+
+        outputStream.write(byteBuffer.array())
+        lastSkippedData.clear()
     }
 
 }
