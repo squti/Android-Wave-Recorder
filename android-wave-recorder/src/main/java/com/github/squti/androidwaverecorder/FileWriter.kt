@@ -29,10 +29,12 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.LinkedList
 
-internal class FileWriter(private val outputStream: DataOutputStream) {
+internal class FileWriter(
+    private val outputStream: DataOutputStream,
+    private val onAudioChunkCaptured: ((ByteArray) -> Unit)?
+) {
     fun writeDataToStream(
-        lastSkippedData: LinkedList<ByteArray>,
-        data: ByteArray
+        lastSkippedData: LinkedList<ByteArray>, data: ByteArray
     ) {
         val totalSize = lastSkippedData.sumOf { it.size } + data.size
         val byteBuffer = ByteBuffer.allocate(totalSize).order(ByteOrder.LITTLE_ENDIAN)
@@ -40,16 +42,17 @@ internal class FileWriter(private val outputStream: DataOutputStream) {
         lastSkippedData.forEach { byteArray ->
             byteBuffer.put(byteArray)
         }
-
         byteBuffer.put(data)
+        lastSkippedData.clear()
 
         outputStream.write(byteBuffer.array())
-        lastSkippedData.clear()
+        onAudioChunkCaptured?.let {
+            it(byteBuffer.array())
+        }
     }
 
     fun writeDataToStream(
-        lastSkippedData: LinkedList<FloatArray>,
-        data: FloatArray
+        lastSkippedData: LinkedList<FloatArray>, data: FloatArray
     ) {
         val totalFloats = lastSkippedData.sumOf { it.size } + data.size
         val totalSize = totalFloats * 4
@@ -63,9 +66,13 @@ internal class FileWriter(private val outputStream: DataOutputStream) {
         data.forEach { floatValue ->
             byteBuffer.putFloat(floatValue)
         }
+        lastSkippedData.clear()
 
         outputStream.write(byteBuffer.array())
-        lastSkippedData.clear()
+
+        onAudioChunkCaptured?.let {
+            it(byteBuffer.array())
+        }
     }
 
 }

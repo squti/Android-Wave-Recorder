@@ -84,6 +84,12 @@ class WaveRecorder {
     var onAmplitudeListener: ((Int) -> Unit)? = null
 
     /**
+     * Register a callback to be invoked for each recorded chunk of audio data.
+     * Provides the captured chunk as a ByteArray.
+     */
+    var onAudioChunkCaptured: ((ByteArray) -> Unit)? = null
+
+    /**
      * Register a callback to be invoked in recording state changes
      */
     var onStateChangeListener: ((RecorderState) -> Unit)? = null
@@ -191,7 +197,7 @@ class WaveRecorder {
             FileOutputStream(file)
         }
         val dataOutputStream = DataOutputStream(outputStream)
-        val fileWriter = FileWriter(dataOutputStream)
+        val fileWriter = FileWriter(dataOutputStream, onAudioChunkCaptured)
 
         val bufferSizeToKeep =
             (waveConfig.sampleRate * channelCount(waveConfig.channels) * (bitPerSample(waveConfig.audioEncoding) / 8) * silenceDetectionConfig.bufferDurationInMillis / 1000).toInt()
@@ -247,7 +253,7 @@ class WaveRecorder {
             FileOutputStream(file)
         }
         val dataOutputStream = DataOutputStream(outputStream)
-        val fileWriter = FileWriter(dataOutputStream)
+        val fileWriter = FileWriter(dataOutputStream, onAudioChunkCaptured)
 
         val bufferSizeToKeep =
             (waveConfig.sampleRate * channelCount(waveConfig.channels) * silenceDetectionConfig.bufferDurationInMillis / 1000).toInt()
