@@ -1,6 +1,5 @@
 # Android Wave Recorder
 [![](https://jitpack.io/v/squti/Android-Wave-Recorder.svg)](https://jitpack.io/#squti/Android-Wave-Recorder)
-[![Android Arsenal](https://img.shields.io/badge/Android%20Arsenal-Android%20Wave%20Recorder-brightgreen.svg?style=flat)](https://android-arsenal.com/details/1/7939)
 
 A powerful and efficient library to record WAVE form audio files (WAV) in Android with Float and 32-bit encoding support.
 <p align="center">
@@ -22,7 +21,7 @@ allprojects {
 Step 2. Add the following dependency to your module `build.gradle`:
 ```gradle
 dependencies{
-    implementation 'com.github.squti:Android-Wave-Recorder:2.0.1'
+    implementation 'com.github.squti:Android-Wave-Recorder:2.1.0'
 }
 ```
 ### Permission
@@ -85,6 +84,13 @@ To listen to audio amplitude during recording, register a listener to `onAmplitu
 ```kotlin
 waveRecorder.onAmplitudeListener = {
     Log.i(TAG, "Amplitude : $it")
+}
+```
+
+To capture audio data chunks during recording, register a listener to `onAudioChunkCaptured`:
+```kotlin
+waveRecorder.onAudioChunkCaptured = { dataChunk ->
+    //doProcess(dataChunk)
 }
 ```
 ### Silence Detection
