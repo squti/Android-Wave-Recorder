@@ -25,17 +25,22 @@
 package com.github.squti.androidwaverecorder
 
 import android.media.AudioFormat
+import android.media.MediaRecorder
+import android.os.Build
+import android.util.Log
 
 /**
  * Configuration for recording file.
  * @property [sampleRate] the number of samples that audio carried per second.
  * @property [channels] number and position of sound source when the sound is recording.
  * @property [audioEncoding] size of data per sample.
+ * @property [audioSource] the input source for the audio recorder
  */
 data class WaveConfig(
     var sampleRate: Int = 16000,
     var channels: Int = AudioFormat.CHANNEL_IN_MONO,
-    var audioEncoding: Int = AudioFormat.ENCODING_PCM_16BIT
+    var audioEncoding: Int = AudioFormat.ENCODING_PCM_16BIT,
+    var audioSource: Int = MediaRecorder.AudioSource.MIC
 )
 
 internal fun bitPerSample(audioEncoding: Int) = when (audioEncoding) {
@@ -50,4 +55,29 @@ internal fun channelCount(channels: Int) = when (channels) {
     AudioFormat.CHANNEL_IN_MONO -> 1
     AudioFormat.CHANNEL_IN_STEREO -> 2
     else -> throw IllegalArgumentException("Unsupported audio channel")
+}
+
+internal fun validateAudioSource(audioSource: Int) {
+    when (audioSource) {
+        MediaRecorder.AudioSource.DEFAULT,
+        MediaRecorder.AudioSource.MIC,
+        MediaRecorder.AudioSource.VOICE_UPLINK,
+        MediaRecorder.AudioSource.VOICE_DOWNLINK,
+        MediaRecorder.AudioSource.VOICE_CALL,
+        MediaRecorder.AudioSource.CAMCORDER,
+        MediaRecorder.AudioSource.VOICE_RECOGNITION,
+        MediaRecorder.AudioSource.VOICE_COMMUNICATION,
+        MediaRecorder.AudioSource.REMOTE_SUBMIX -> {
+            Log.d("WaveConfig", "Using valid audio source: $audioSource")
+        }
+
+        MediaRecorder.AudioSource.UNPROCESSED,
+        MediaRecorder.AudioSource.VOICE_PERFORMANCE -> {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT) {
+                throw IllegalArgumentException("AudioSource $audioSource requires API level 19+")
+            }
+        }
+
+        else -> throw IllegalArgumentException("Unsupported MediaRecorder.AudioSource: $audioSource")
+    }
 }

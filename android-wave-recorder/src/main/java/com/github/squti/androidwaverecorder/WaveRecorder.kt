@@ -151,6 +151,7 @@ class WaveRecorder {
     @OptIn(DelicateCoroutinesApi::class)
     fun startRecording() {
         if (!isAudioRecorderInitialized()) {
+            validateAudioSource(waveConfig.audioSource)
             initializeAudioRecorder()
             GlobalScope.launch(Dispatchers.IO) {
                 if (waveConfig.audioEncoding == AudioFormat.ENCODING_PCM_FLOAT) {
@@ -168,7 +169,7 @@ class WaveRecorder {
     @SuppressLint("MissingPermission")
     private fun initializeAudioRecorder() {
         audioRecorder = AudioRecord(
-            MediaRecorder.AudioSource.MIC,
+            waveConfig.audioSource,
             waveConfig.sampleRate,
             waveConfig.channels,
             waveConfig.audioEncoding,
