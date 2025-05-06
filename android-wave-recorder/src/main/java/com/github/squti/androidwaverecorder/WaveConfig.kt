@@ -56,28 +56,3 @@ internal fun channelCount(channels: Int) = when (channels) {
     AudioFormat.CHANNEL_IN_STEREO -> 2
     else -> throw IllegalArgumentException("Unsupported audio channel")
 }
-
-internal fun validateAudioSource(audioSource: Int) {
-    when (audioSource) {
-        MediaRecorder.AudioSource.DEFAULT,
-        MediaRecorder.AudioSource.MIC,
-        MediaRecorder.AudioSource.VOICE_UPLINK,
-        MediaRecorder.AudioSource.VOICE_DOWNLINK,
-        MediaRecorder.AudioSource.VOICE_CALL,
-        MediaRecorder.AudioSource.CAMCORDER,
-        MediaRecorder.AudioSource.VOICE_RECOGNITION,
-        MediaRecorder.AudioSource.VOICE_COMMUNICATION,
-        MediaRecorder.AudioSource.REMOTE_SUBMIX -> {
-            Log.d("WaveConfig", "Using valid audio source: $audioSource")
-        }
-
-        MediaRecorder.AudioSource.UNPROCESSED,
-        MediaRecorder.AudioSource.VOICE_PERFORMANCE -> {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT) {
-                throw IllegalArgumentException("AudioSource $audioSource requires API level 19+")
-            }
-        }
-
-        else -> throw IllegalArgumentException("Unsupported MediaRecorder.AudioSource: $audioSource")
-    }
-}

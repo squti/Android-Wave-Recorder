@@ -151,7 +151,6 @@ class WaveRecorder {
     @OptIn(DelicateCoroutinesApi::class)
     fun startRecording() {
         if (!isAudioRecorderInitialized()) {
-            validateAudioSource(waveConfig.audioSource)
             initializeAudioRecorder()
             GlobalScope.launch(Dispatchers.IO) {
                 if (waveConfig.audioEncoding == AudioFormat.ENCODING_PCM_FLOAT) {
