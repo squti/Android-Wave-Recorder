@@ -25,6 +25,7 @@
 package com.github.squti.androidwaverecorder
 
 import android.media.AudioFormat
+import android.media.MediaRecorder
 
 /**
  * Configuration for recording file.
@@ -35,7 +36,8 @@ import android.media.AudioFormat
 data class WaveConfig(
     var sampleRate: Int = 16000,
     var channels: Int = AudioFormat.CHANNEL_IN_MONO,
-    var audioEncoding: Int = AudioFormat.ENCODING_PCM_16BIT
+    var audioEncoding: Int = AudioFormat.ENCODING_PCM_16BIT,
+    var audioSource: Int = MediaRecorder.AudioSource.MIC
 )
 
 internal fun bitPerSample(audioEncoding: Int) = when (audioEncoding) {
